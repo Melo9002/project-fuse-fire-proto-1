@@ -1,0 +1,82 @@
+[gd_scene format=3 uid="uid://bii4xkuqqjtgc"]
+
+[ext_resource type="Script" uid="uid://cqcmmhrekr2of" path="res://levels/prototype_map/mouse_raycaster.gd" id="1_822c8"]
+[ext_resource type="Script" uid="uid://ck52agsrnr6h" path="res://levels/prototype_map/battle_controller.gd" id="3_fg2v6"]
+[ext_resource type="Script" uid="uid://cu36ocv6o5mgc" path="res://levels/prototype_map/grid_visualizer.gd" id="4_q85eh"]
+[ext_resource type="PackedScene" uid="uid://c7nrcruyj4khu" path="res://entities/tactical_unit/tactical_unit.tscn" id="4_tsi40"]
+[ext_resource type="Script" uid="uid://cf02ctu30b6hm" path="res://levels/prototype_map/grid_cursor.gd" id="5_q85eh"]
+[ext_resource type="Script" uid="uid://ddyyfvx30kuoe" path="res://levels/prototype_map/path_visualizer.gd" id="6_8rqs0"]
+
+[sub_resource type="Environment" id="Environment_8x357"]
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_ebqvm"]
+
+[sub_resource type="Compositor" id="Compositor_ytady"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ebqvm"]
+albedo_color = Color(1, 0, 0.023529412, 1)
+
+[node name="BattleLevel" type="Node3D" unique_id=1534168603]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=18979429]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=371801750]
+environment = SubResource("Environment_8x357")
+camera_attributes = SubResource("CameraAttributesPractical_ebqvm")
+compositor = SubResource("Compositor_ytady")
+
+[node name="MapFloor" type="CSGBox3D" parent="." unique_id=584320246]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+use_collision = true
+collision_layer = 2
+collision_mask = 2
+size = Vector3(20, 1, 20)
+
+[node name="WallObstacle" type="CSGBox3D" parent="." unique_id=2016319224]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0.5, 2.5)
+use_collision = true
+material = SubResource("StandardMaterial3D_ebqvm")
+
+[node name="WallObstacle2" type="CSGBox3D" parent="." unique_id=928162335]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -5, 0.5, -5)
+use_collision = true
+size = Vector3(8, 1, 1)
+material = SubResource("StandardMaterial3D_ebqvm")
+
+[node name="WallObstacle3" type="CSGBox3D" parent="." unique_id=1605087906]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.5, 2.5)
+use_collision = true
+size = Vector3(8, 1, 1)
+material = SubResource("StandardMaterial3D_ebqvm")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=743300731]
+transform = Transform3D(1, 0, 0, 0, 0.7071068, 0.7071068, 0, -0.7071068, 0.7071068, 0, 24.386333, 26.667873)
+fov = 25.70093
+
+[node name="MouseRaycaster" type="Node3D" parent="." unique_id=168739336 node_paths=PackedStringArray("camera")]
+script = ExtResource("1_822c8")
+camera = NodePath("../Camera3D")
+
+[node name="BattleController" type="Node3D" parent="." unique_id=1810984402 node_paths=PackedStringArray("tactical_unit", "mouse_raycaster", "grid_cursor", "path_visualizer", "map_floor")]
+script = ExtResource("3_fg2v6")
+tactical_unit = NodePath("../TacticalUnit")
+mouse_raycaster = NodePath("../MouseRaycaster")
+grid_cursor = NodePath("../GridCursor")
+path_visualizer = NodePath("../PathVisualizer")
+map_floor = NodePath("../MapFloor")
+
+[node name="TacticalUnit" parent="." unique_id=225498665 instance=ExtResource("4_tsi40")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.72652817, 1.000001, 0.05766487)
+
+[node name="GridVisualizer" type="MeshInstance3D" parent="." unique_id=1699779869 node_paths=PackedStringArray("target_floor")]
+layers = 2
+script = ExtResource("4_q85eh")
+target_floor = NodePath("../MapFloor")
+
+[node name="GridCursor" type="Decal" parent="." unique_id=535165235]
+layers = 2
+script = ExtResource("5_q85eh")
+highlight_color = Color(0.9999594, 0.122358926, 0.10734794, 0.8)
+
+[node name="PathVisualizer" type="Node3D" parent="." unique_id=916084487]
+script = ExtResource("6_8rqs0")

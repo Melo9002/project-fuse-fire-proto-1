@@ -19,6 +19,12 @@ config/icon="res://icon.svg"
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
+[layer_names]
+
+3d_render/layer_1="Environment"
+3d_render/layer_2="Grid Floor"
+3d_render/layer_3="Units"
+
 [physics]
 
 3d/physics_engine="Jolt Physics"

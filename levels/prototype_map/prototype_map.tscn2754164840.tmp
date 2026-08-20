@@ -1,0 +1,100 @@
+[gd_scene format=3 uid="uid://bii4xkuqqjtgc"]
+
+[ext_resource type="Script" uid="uid://cqcmmhrekr2of" path="res://levels/prototype_map/mouse_raycaster.gd" id="1_822c8"]
+[ext_resource type="Script" uid="uid://ck52agsrnr6h" path="res://levels/prototype_map/battle_controller.gd" id="3_fg2v6"]
+[ext_resource type="PackedScene" uid="uid://c7nrcruyj4khu" path="res://entities/tactical_unit/tactical_unit.tscn" id="4_tsi40"]
+
+[sub_resource type="Environment" id="Environment_8x357"]
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_ebqvm"]
+
+[sub_resource type="Compositor" id="Compositor_ytady"]
+
+[sub_resource type="PlaceholderMesh" id="PlaceholderMesh_tsi40"]
+
+[sub_resource type="GDScript" id="GDScript_fg2v6"]
+script/source = "extends MeshInstance3D
+class_name GridVisualizer
+
+@export var cell_size: float = 1.0
+@export var grid_width: int = 10  # 10 tiles wide * 2m = 20 meters
+@export var grid_depth: int = 10  # 10 tiles deep * 2m = 20 meters
+@export var grid_color: Color = Color(0.0, 1.0, 1.0, 0.5) # Glowing semi-transparent cyan
+
+func _ready() -> void:
+	generate_grid_lines()
+
+func generate_grid_lines() -> void:
+	# 1. Create a dynamic, procedural mesh container
+	var imm_mesh = ImmediateMesh.new()
+	self.mesh = imm_mesh
+	
+	# 2. Setup an unshaded material so the grid glows regardless of world lighting
+	var material = StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color = grid_color
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	
+	# 3. Begin drawing lines
+	imm_mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
+	
+	# Calculate the outer edges so the grid centers perfectly around (0,0,0)
+	var half_width = (grid_width * cell_size) / 2.0
+	var half_depth = (grid_depth * cell_size) / 2.0
+	var y_offset = 0.01 # Sit a tiny fraction above the floor to avoid visual flickering (Z-fighting)
+	
+	# Draw Horizontal Lines (along the X axis)
+	for i in range(grid_depth + 1):
+		var z = (i * cell_size) - half_depth
+		imm_mesh.surface_add_vertex(Vector3(-half_width, y_offset, z))
+		imm_mesh.surface_add_vertex(Vector3(half_width, y_offset, z))
+		
+	# Draw Vertical Lines (along the Z axis)
+	for i in range(grid_width + 1):
+		var x = (i * cell_size) - half_width
+		imm_mesh.surface_add_vertex(Vector3(x, y_offset, -half_depth))
+		imm_mesh.surface_add_vertex(Vector3(x, y_offset, half_depth))
+		
+	# 4. Commit the lines to the GPU
+	imm_mesh.surface_end()
+
+# This handles the visibility toggle when you press a key!
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed(\"ui_focus_next\"): # This is bound to the 'TAB' key by default in Godot
+		visible = not visible
+		print(\"Tactical Grid Visibility toggled: \", visible)
+"
+
+[node name="BattleLevel" type="Node3D" unique_id=1534168603]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=18979429]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=371801750]
+environment = SubResource("Environment_8x357")
+camera_attributes = SubResource("CameraAttributesPractical_ebqvm")
+compositor = SubResource("Compositor_ytady")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=584320246]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+use_collision = true
+size = Vector3(20, 1, 20)
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=743300731]
+transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70710677, 0, 10, 12)
+
+[node name="MouseRaycaster" type="Node3D" parent="." unique_id=168739336]
+script = ExtResource("1_822c8")
+
+[node name="BattleController" type="Node" parent="." unique_id=768624336 node_paths=PackedStringArray("mouse_raycaster", "tactical_unit")]
+script = ExtResource("3_fg2v6")
+mouse_raycaster = NodePath("../MouseRaycaster")
+tactical_unit = NodePath("../TacticalUnit")
+
+[node name="TacticalUnit" parent="." unique_id=225498665 instance=ExtResource("4_tsi40")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.72652817, 1.000001, 0.05766487)
+
+[node name="GridVisualizer" type="MeshInstance3D" parent="." unique_id=1699779869]
+mesh = SubResource("PlaceholderMesh_tsi40")
+script = SubResource("GDScript_fg2v6")
+cell_size = null
+grid_color = null

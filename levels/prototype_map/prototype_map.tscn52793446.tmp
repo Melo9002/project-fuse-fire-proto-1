@@ -1,0 +1,39 @@
+[gd_scene format=3 uid="uid://bii4xkuqqjtgc"]
+
+[ext_resource type="Script" uid="uid://cqcmmhrekr2of" path="res://levels/prototype_map/mouse_raycaster.gd" id="1_822c8"]
+[ext_resource type="Script" uid="uid://ck52agsrnr6h" path="res://levels/prototype_map/battle_controller.gd" id="3_fg2v6"]
+[ext_resource type="PackedScene" uid="uid://c7nrcruyj4khu" path="res://entities/tactical_unit/tactical_unit.tscn" id="4_tsi40"]
+
+[sub_resource type="Environment" id="Environment_8x357"]
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_ebqvm"]
+
+[sub_resource type="Compositor" id="Compositor_ytady"]
+
+[node name="BattleLevel" type="Node3D" unique_id=1534168603]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=18979429]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=371801750]
+environment = SubResource("Environment_8x357")
+camera_attributes = SubResource("CameraAttributesPractical_ebqvm")
+compositor = SubResource("Compositor_ytady")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=584320246]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+use_collision = true
+size = Vector3(20, 1, 20)
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=743300731]
+transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70710677, 0, 10, 12)
+
+[node name="MouseRaycaster" type="Node3D" parent="." unique_id=168739336]
+script = ExtResource("1_822c8")
+
+[node name="BattleController" type="Node" parent="." unique_id=768624336 node_paths=PackedStringArray("mouse_raycaster", "tactical_unit")]
+script = ExtResource("3_fg2v6")
+mouse_raycaster = NodePath("../MouseRaycaster")
+tactical_unit = NodePath("../TacticalUnit")
+
+[node name="TacticalUnit" parent="." unique_id=225498665 instance=ExtResource("4_tsi40")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.72652817, 1.000001, 0.05766487)
