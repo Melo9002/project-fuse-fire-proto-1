@@ -1,96 +1,207 @@
-\# 🔥 Project FuseFire
+# 🔥 Project FuseFire
 
+**Project FuseFire** is a prototype 3D tactical grid engine built with **Godot 4**.
 
+The project explores a flexible, mathematically-driven approach to tactical movement and battlefield interaction, with the goal of keeping gameplay logic independent from visual assets and level-specific implementation details.
 
-Welcome to \*\*Project FuseFire\*\*, a high-performance, strictly-typed 3D tactical grid engine built from the ground up in \*\*Godot 4\*\*. 
+The core design principles are:
 
+* **Separation of concerns**
+* **Runtime flexibility**
+* **Deterministic grid calculations**
+* **Delta-time-based movement**
+* **Procedural visualization**
 
+> 🚧 **Prototype status:** FuseFire is an experimental gameplay prototype. The architecture and systems are actively evolving.
 
-This project moves away from traditional, restrictive manual tile placement by leveraging a decoupled, mathematically-driven grid architecture. The core design principles are \*\*separation of concerns\*\*, \*\*runtime flexibility\*\*, and \*\*delta-timed predictability\*\*.
+---
 
+## 🎯 What Is FuseFire?
 
+FuseFire started as an experiment in building a **3D tactical battlefield from the ground up**, rather than relying on manually placed tile objects.
 
-\---
+Instead of treating every tile as a physical object in the scene, the battlefield is represented mathematically. The game can determine which grid cell the player is pointing at, calculate its center, and translate units between cells without requiring every possible tile position to exist as a separate node.
 
+This makes the system considerably easier to extend toward larger maps, procedural environments, pathfinding, and eventually more complex tactical mechanics.
 
+---
 
-\## 🚀 Current Architecture \& Features
+## 🧩 Current Architecture
 
+### 1. Mathematical Grid Backend
 
+The grid is treated as a logical system rather than a collection of manually placed objects.
 
-We have successfully established the foundational gameplay loop, input processing layer, and real-time visualization frameworks:
+**Dynamic Grid Layout**
 
+Grid boundaries are calculated from the battlefield geometry at runtime, allowing the logical grid to adapt to the dimensions of the map.
 
+**Cell-Center Snapping**
 
-\### 1. The Mathematical Grid Backend
+Continuous 3D positions obtained from mouse interaction are converted into discrete grid coordinates using floor-based calculations. The resulting position is then snapped to the center of the corresponding cell.
 
-\* \*\*Dynamic Single-Source-of-Truth Layout:\*\* The entire tactical grid is decoupled from physical art assets. Grid boundaries dynamically adapt at runtime to match the dimensions of the map geometry down to the millimeter.
+In other words:
 
-\* \*\*Cell-Center Snapping Engine:\*\* Leverages precise 3D floor algorithms (`floor()` routing) to instantly convert continuous mouse hit positions into perfectly aligned, symmetric grid cell centers.
+```text
+Mouse Position
+      ↓
+Physics Raycast
+      ↓
+World-Space Hit Position
+      ↓
+Grid Coordinate
+      ↓
+Cell Center
+```
 
+---
 
+### 2. Gameplay & Input Framework
 
-\### 2. Gameplay \& Input Framework
+#### `BattleController`
 
-\* \*\*Strict Type-Safe Controller (`BattleController`):\*\* A specialized orchestration script managing interaction between data states, player inputs, and active battlefield entities with complete compilation-level type guarantees.
+`BattleController` acts as the main orchestration layer between player input, battlefield state, and active units.
 
-\* \*\*Asynchronous Execution (`TacticalUnit`):\*\* Units are autonomous objects responsible for their own physics loops. They handle local space state translation via delta-timed linear interpolation (`move\_toward`), completely eliminating framerate dependency bugs.
+Its responsibilities currently include:
 
+* Processing player interaction
+* Determining targeted grid cells
+* Coordinating movement commands
+* Managing the interaction between the grid and tactical units
 
+The project uses **strictly typed GDScript** wherever practical to keep gameplay code predictable and easier to maintain.
 
-\### 3. Tactical UX \& Visual Overlays
+#### `TacticalUnit`
 
-\* \*\*ImmediateMesh Procedural Grid (`GridVisualizer`):\*\* Renders crisp, glowing, unshaded wireframe boundaries directly on the GPU without requiring heavy textured meshes or manual level painting.
+Units are responsible for their own movement and local state.
 
-\* \*\*Real-Time Predictive Cursor (`GridCursor`):\*\* Continuously queries the physics world state on every frame to project a snapped visual marker directly beneath the mouse pointer, providing instant feedback to the player.
+Movement is calculated using delta-time-based interpolation with `move_toward()`, allowing movement speed to remain consistent regardless of frame rate.
 
+```text
+Movement Command
+       ↓
+Target Cell
+       ↓
+World Position
+       ↓
+TacticalUnit
+       ↓
+Delta-Time Movement
+```
 
+---
 
-\---
+### 3. Tactical UX & Visual Overlays
 
+#### `GridVisualizer`
 
+The tactical grid is generated procedurally using Godot's `ImmediateMesh`.
 
-\## 🎮 Keyboard \& Mouse Controls
+This avoids the need to manually create and position large numbers of mesh objects while providing a lightweight visual representation of the battlefield grid.
 
+The grid can also be toggled at runtime.
 
+#### `GridCursor`
 
-| Action | Input | Result |
+`GridCursor` provides immediate visual feedback when the player moves the mouse across the battlefield.
 
-| :--- | :--- | :--- |
+Each frame, it:
 
-| \*\*Hover Selection\*\* | `Mouse Move` | Snaps the `GridCursor` to the targeted tile center |
+1. Performs a physics query from the camera through the mouse position.
+2. Determines the 3D position being targeted.
+3. Converts that position into a grid cell.
+4. Snaps the cursor to the center of that cell.
 
-| \*\*Issue Move Command\*\* | `Left Click` | Smoothly translates the active `TacticalUnit` to the target tile |
+The result is a tactical cursor that follows the logical grid rather than simply following the mouse in world space.
 
-| \*\*Toggle Tactical Overlay\*\* | `TAB` Key | Instantly flips the visibility of the glowing grid visualizer |
+---
 
+## 🎮 Controls
 
+| Action                      | Input      | Result                                                   |
+| --------------------------- | ---------- | -------------------------------------------------------- |
+| **Hover Selection**         | Mouse Move | Snaps the `GridCursor` to the targeted tile center       |
+| **Issue Move Command**      | Left Click | Moves the active `TacticalUnit` toward the selected tile |
+| **Toggle Tactical Overlay** | `TAB`      | Toggles the procedural grid visualization                |
 
-\---
+---
 
+## 🛠️ Tech Stack
 
+| Component         | Technology                            |
+| ----------------- | ------------------------------------- |
+| **Engine**        | Godot 4+                              |
+| **Language**      | GDScript                              |
+| **Code Style**    | Strictly Typed GDScript               |
+| **Physics**       | Godot 3D Physics / Direct Space State |
+| **Raycasting**    | `intersect_ray()`                     |
+| **Grid Math**     | `Vector3` / `Vector3i`                |
+| **Visualization** | `ImmediateMesh`                       |
+| **Movement**      | Delta-time-based interpolation        |
 
-\## 🛠️ Tech Stack \& Implementation Details
+---
 
-\* \*\*Engine:\*\* Godot 4+
+## 🏗️ Current Systems
 
-\* \*\*Language:\*\* GDScript (Strictly Typed Variant)
+The current prototype contains the following foundational systems:
 
-\* \*\*Physics Domain:\*\* Direct 3D Space State Raycasting (`IntersectRay`)
+* [x] Runtime grid calculation
+* [x] Grid cell coordinate conversion
+* [x] Cell-center snapping
+* [x] 3D mouse-to-world raycasting
+* [x] Procedural grid visualization
+* [x] Tactical grid cursor
+* [x] Tactical unit movement
+* [x] Delta-time-based movement
+* [x] Tactical overlay toggle
+* [x] Strictly typed gameplay scripts
 
-\* \*\*Vector Math:\*\* Linear Vector Interpolation scaled via Engine Delta Clocks
+---
 
+## 📈 Next Milestones
 
+The prototype is currently focused on establishing the underlying tactical framework. Planned systems include:
 
-\---
+* [ ] Multi-layer 3D grid coordinates using `Vector3i`
+* [ ] Environmental collision filtering
+* [ ] Obstacles and blocked grid cells
+* [ ] A* pathfinding
+* [ ] Tactical movement ranges
+* [ ] Unit selection and turn-state management
+* [ ] Multiple tactical units
+* [ ] Terrain and elevation handling
+* [ ] More advanced battlefield visualization
 
+---
 
+## 🧠 Design Philosophy
 
-\## 📈 Next Milestones On The Horizon
+FuseFire is being built around a simple idea:
 
-\- \[ ] Implement multi-layered 3D pathfinding databases (`Vector3i` coordinates)
+> **The battlefield should be data first, visuals second.**
 
-\- \[ ] Add environmental collision masks to safely ignore decorative geometry
+A grid cell shouldn't need to exist as a physical object just because the game needs to know where it is.
 
-\- \[ ] Build obstacle navigation arrays (A\* Pathfinding implementation)
+By keeping the tactical grid mathematical and allowing visual systems to consume that data, the project can evolve toward more complex gameplay without tying core mechanics to scene structure.
 
+This approach should make it easier to experiment with:
+
+* Procedural battlefields
+* Large tactical maps
+* Multiple elevation layers
+* Pathfinding
+* Dynamic obstacles
+* Different battlefield visualizations
+* More complex tactical rules
+
+---
+
+## 📂 Project Status
+
+**FuseFire is currently a technical prototype.**
+
+The immediate goal is not to build a complete game, but to establish a solid tactical foundation that can support one.
+
+The prototype is deliberately small while the underlying architecture is being tested and refined.
+
+🔥 **The fire has been lit. The rest is engineering.**
