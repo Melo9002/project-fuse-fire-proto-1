@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://c7nrcruyj4khu" path="res://entities/tactical_unit/tactical_unit.tscn" id="4_tsi40"]
 [ext_resource type="Script" uid="uid://cf02ctu30b6hm" path="res://levels/prototype_map/grid_cursor.gd" id="5_q85eh"]
 [ext_resource type="Script" uid="uid://ddyyfvx30kuoe" path="res://levels/prototype_map/path_visualizer.gd" id="6_8rqs0"]
+[ext_resource type="Script" uid="uid://xam0a3oofrn" path="res://levels/prototype_map/grid_manager.gd" id="7_ao12l"]
 
 [sub_resource type="Environment" id="Environment_8x357"]
 
@@ -57,13 +58,14 @@ fov = 25.70093
 script = ExtResource("1_822c8")
 camera = NodePath("../Camera3D")
 
-[node name="BattleController" type="Node3D" parent="." unique_id=1810984402 node_paths=PackedStringArray("tactical_unit", "mouse_raycaster", "grid_cursor", "path_visualizer", "map_floor")]
+[node name="BattleController" type="Node3D" parent="." unique_id=1810984402 node_paths=PackedStringArray("tactical_unit", "mouse_raycaster", "grid_cursor", "path_visualizer", "map_floor", "grid_manager")]
 script = ExtResource("3_fg2v6")
 tactical_unit = NodePath("../TacticalUnit")
 mouse_raycaster = NodePath("../MouseRaycaster")
 grid_cursor = NodePath("../GridCursor")
 path_visualizer = NodePath("../PathVisualizer")
 map_floor = NodePath("../MapFloor")
+grid_manager = NodePath("../GridManager")
 
 [node name="TacticalUnit" parent="." unique_id=225498665 instance=ExtResource("4_tsi40")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.72652817, 1.000001, 0.05766487)
@@ -73,10 +75,16 @@ layers = 2
 script = ExtResource("4_q85eh")
 target_floor = NodePath("../MapFloor")
 
-[node name="GridCursor" type="Decal" parent="." unique_id=535165235]
+[node name="GridCursor" type="Decal" parent="." unique_id=535165235 node_paths=PackedStringArray("grid_manager")]
 layers = 2
 script = ExtResource("5_q85eh")
+grid_manager = NodePath("../GridManager")
 highlight_color = Color(0.9999594, 0.122358926, 0.10734794, 0.8)
 
-[node name="PathVisualizer" type="Node3D" parent="." unique_id=916084487]
+[node name="PathVisualizer" type="Node3D" parent="." unique_id=916084487 node_paths=PackedStringArray("grid_manager")]
 script = ExtResource("6_8rqs0")
+grid_manager = NodePath("../GridManager")
+
+[node name="GridManager" type="Node" parent="." unique_id=1914214414 node_paths=PackedStringArray("map_floor")]
+script = ExtResource("7_ao12l")
+map_floor = NodePath("../MapFloor")

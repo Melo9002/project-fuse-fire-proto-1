@@ -6,7 +6,7 @@ class_name TacticalUnit
 signal movement_finished 
 
 @export var movement_speed: float = 5.0
-@export var move_range: int = 20
+@export var move_range: int = 10
 
 var current_path: PackedVector3Array = PackedVector3Array()
 var current_waypoint_idx: int = 0

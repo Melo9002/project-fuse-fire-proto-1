@@ -7,6 +7,7 @@ class_name BattleController
 @export var grid_cursor: GridCursor
 @export var path_visualizer: PathVisualizer 
 @export var map_floor: CSGBox3D 
+@export var grid_manager: GridManager
 
 var pathfinder := Pathfinder.new()
 var current_movement_zone: Array[Vector3i] = []
@@ -37,27 +38,35 @@ func _ready() -> void:
 			
 	print("3D A* Pathfinding graph fully populated on the floor surface!")
 
-	# --- 2. PHYSICS RAYCAST SCANNER ---
+	# --- 2. PHYSICS VOLUME SCANNER (Godot 4 Shape Query) ---
 	await get_tree().create_timer(0.05).timeout
 	var space_state = get_world_3d().direct_space_state
+	
+	# Create a box shape slightly smaller than cell_size to prevent false positives on adjacent grid walls
+	var cell_box := BoxShape3D.new()
+	cell_box.size = Vector3(cell_size * 0.9, 2.0, cell_size * 0.9)
+	
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = cell_box
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	
+	if tactical_unit.has_method("get_rid"):
+		query.exclude = [tactical_unit.get_rid()]
 	
 	for grid_pos in pathfinder.grid_to_id_map.keys():
 		var node_id = pathfinder.grid_to_id_map[grid_pos]
 		var world_pos = pathfinder.astar.get_point_position(node_id)
 		
-		var ray_start = world_pos + Vector3(0, 10.0, 0)
-		var ray_end = world_pos + Vector3(0, 0.1, 0) 
-		var query = PhysicsRayQueryParameters3D.create(ray_start, ray_end)
-		query.hit_from_inside = true
+		# Center the 3D query box over the tile volume
+		query.transform = Transform3D(Basis(), world_pos + Vector3(0, 1.0, 0))
 		
-		if tactical_unit.has_method("get_rid"):
-			query.exclude = [tactical_unit.get_rid()]
-		
-		var result = space_state.intersect_ray(query)
-		if result:
+		# Query up to 1 collision hit within the tile box
+		var hits = space_state.intersect_shape(query, 1)
+		if not hits.is_empty():
 			pathfinder.disable_cell(grid_pos)
 			
-	print("Level physics scan complete! Graph routing paths perfectly updated.")
+	print("Level volume scan complete! Grid routing paths updated.")
 	
 	# --- 3. INITIALIZE THE TURN STATE ---
 	update_unit_movement_zone()
