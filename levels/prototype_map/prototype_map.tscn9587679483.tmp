@@ -7,6 +7,7 @@
 [ext_resource type="Script" uid="uid://b1mynbpyv6ta4" path="res://systems/grid/pathfinder.gd" id="5_efvkb"]
 [ext_resource type="Script" uid="uid://cf02ctu30b6hm" path="res://visualizers/grid_cursor.gd" id="5_q85eh"]
 [ext_resource type="Script" uid="uid://ddyyfvx30kuoe" path="res://visualizers/path_visualizer.gd" id="6_8rqs0"]
+[ext_resource type="PackedScene" uid="uid://c3op01etoi47c" path="res://units/EnemyUnit.tscn" id="6_g80er"]
 [ext_resource type="Script" uid="uid://xam0a3oofrn" path="res://systems/grid/grid_manager.gd" id="7_ao12l"]
 [ext_resource type="Script" uid="uid://dahqrjsr7c5u8" path="res://units/ai_controller.gd" id="7_q7tb2"]
 [ext_resource type="Script" uid="uid://sduodsntgvey" path="res://systems/turn_manager.gd" id="8_butv0"]
@@ -56,10 +57,8 @@ turn_manager = NodePath("../TurnManager")
 script = ExtResource("7_ao12l")
 map_floor = NodePath("../../Environment/MapFloor")
 
-[node name="TurnManager" type="Node" parent="Systems" unique_id=1069557217 node_paths=PackedStringArray("player_units", "enemy_units")]
+[node name="TurnManager" type="Node" parent="Systems" unique_id=1069557217]
 script = ExtResource("8_butv0")
-player_units = [NodePath("../../Units/PlayerUnits/TacticalUnit")]
-enemy_units = [NodePath("../../Units/EnemyUnits/TacticalUnitEnemy")]
 
 [node name="Pathfinder" type="Node" parent="Systems" unique_id=801747600]
 script = ExtResource("5_efvkb")
@@ -107,15 +106,16 @@ material = SubResource("StandardMaterial3D_ebqvm")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.72652817, 1.000001, 0.05766487)
 
 [node name="EnemyUnits" type="Node3D" parent="Units" unique_id=1196483931]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1, 5)
 
-[node name="TacticalUnitEnemy" parent="Units/EnemyUnits" unique_id=184559395 instance=ExtResource("4_tsi40")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 1, 5.5)
+[node name="EnemyUnit" parent="Units/EnemyUnits" unique_id=1476683634 instance=ExtResource("6_g80er")]
 
-[node name="AIController" type="Node" parent="Units/EnemyUnits" unique_id=1999439885 node_paths=PackedStringArray("unit", "turn_manager", "battle_controller")]
+[node name="AIController" type="Node" parent="Units/EnemyUnits" unique_id=1999439885 node_paths=PackedStringArray("unit", "turn_manager", "grid_manager", "pathfinder")]
 script = ExtResource("7_q7tb2")
-unit = NodePath("../TacticalUnitEnemy")
+unit = NodePath("../EnemyUnit")
 turn_manager = NodePath("../../../Systems/TurnManager")
-battle_controller = NodePath("../../../Systems/BattleController")
+grid_manager = NodePath("../../../Systems/GridManager")
+pathfinder = NodePath("../../../Systems/Pathfinder")
 
 [node name="Visualizers" type="Node3D" parent="." unique_id=1615445199]
 

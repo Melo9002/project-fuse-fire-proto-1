@@ -8,11 +8,16 @@ class_name BattleController
 @export var path_visualizer: PathVisualizer 
 @export var map_floor: CSGBox3D 
 @export var grid_manager: GridManager
+@export var turn_manager: TurnManager
 
 var pathfinder := Pathfinder.new()
 var current_movement_zone: Array[Vector3i] = []
 
 func _ready() -> void:
+	
+	turn_manager.turn_phase_changed.connect(_on_turn_phase_changed)
+	turn_manager.active_unit_changed.connect(_on_active_unit_changed)
+	
 	if not mouse_raycaster or not map_floor or not path_visualizer:
 		push_error("Missing critical node assignments on BattleController!")
 		return
@@ -51,8 +56,13 @@ func _ready() -> void:
 	query.collide_with_bodies = true
 	query.collide_with_areas = false
 	
-	if tactical_unit.has_method("get_rid"):
-		query.exclude = [tactical_unit.get_rid()]
+	# Exclude ALL unit RIDs across both rosters from being scanned as wall obstacles
+	var excluded_rids: Array[RID] = []
+	for unit_item in turn_manager.player_units + turn_manager.enemy_units:
+		if unit_item and unit_item.has_method("get_rid"):
+			excluded_rids.append(unit_item.get_rid())
+			
+	query.exclude = excluded_rids
 	
 	for grid_pos in pathfinder.grid_to_id_map.keys():
 		var node_id = pathfinder.grid_to_id_map[grid_pos]
@@ -69,10 +79,14 @@ func _ready() -> void:
 	print("Level volume scan complete! Grid routing paths updated.")
 	
 	# --- 3. INITIALIZE THE TURN STATE ---
-	update_unit_movement_zone()
-
+	turn_manager.start_battle()
 
 func _process(_delta: float) -> void:
+	# Guard Clause: Disable mouse hover path visuals outside Player Turn
+	if not turn_manager or turn_manager.current_phase != TurnManager.TurnPhase.PLAYER_TURN:
+		path_visualizer.clear_path()
+		return
+		
 	if not mouse_raycaster or not grid_cursor:
 		return
 		
@@ -97,8 +111,9 @@ func _process(_delta: float) -> void:
 
 
 func _on_floor_clicked(raw_position: Vector3) -> void:
-	if tactical_unit.is_moving:
-		return 
+	# Guard Clause: Ignore player input if moving or if it's NOT the player's turn
+	if tactical_unit.is_moving or turn_manager.current_phase != TurnManager.TurnPhase.PLAYER_TURN:
+		return
 		
 	# Refuse to move if the player clicks outside the yellow zone!
 	var clicked_grid = world_to_grid(raw_position)
@@ -117,6 +132,18 @@ func _on_floor_clicked(raw_position: Vector3) -> void:
 		await tactical_unit.movement_finished
 		update_unit_movement_zone()
 
+func _on_turn_phase_changed(new_phase: TurnManager.TurnPhase) -> void:
+	var is_player_control = (new_phase == TurnManager.TurnPhase.PLAYER_TURN)
+	grid_cursor.visible = is_player_control
+	if not is_player_control:
+		path_visualizer.clear_path()
+		path_visualizer.clear_range_zone()
+
+func _on_active_unit_changed(unit: TacticalUnit) -> void:
+	tactical_unit = unit
+	# Only draw player movement visualizer during the player's turn phase
+	if turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN:
+		update_unit_movement_zone()
 
 # --- HELPER FUNCTIONS ---
 

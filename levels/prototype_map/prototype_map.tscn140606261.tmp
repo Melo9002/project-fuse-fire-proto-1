@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://cqcmmhrekr2of" path="res://systems/grid/mouse_raycaster.gd" id="1_822c8"]
 [ext_resource type="Script" uid="uid://ck52agsrnr6h" path="res://systems/battle_controller.gd" id="3_fg2v6"]
 [ext_resource type="Script" uid="uid://cu36ocv6o5mgc" path="res://visualizers/grid_visualizer.gd" id="4_q85eh"]
-[ext_resource type="PackedScene" uid="uid://c7nrcruyj4khu" path="res://units/tactical_unit.tscn" id="4_tsi40"]
+[ext_resource type="PackedScene" uid="uid://4c8esj25wm4u" path="res://units/EnemyUnit.tscn" id="4_tsi40"]
 [ext_resource type="Script" uid="uid://b1mynbpyv6ta4" path="res://systems/grid/pathfinder.gd" id="5_efvkb"]
 [ext_resource type="Script" uid="uid://cf02ctu30b6hm" path="res://visualizers/grid_cursor.gd" id="5_q85eh"]
 [ext_resource type="Script" uid="uid://ddyyfvx30kuoe" path="res://visualizers/path_visualizer.gd" id="6_8rqs0"]
@@ -58,8 +58,8 @@ map_floor = NodePath("../../Environment/MapFloor")
 
 [node name="TurnManager" type="Node" parent="Systems" unique_id=1069557217 node_paths=PackedStringArray("player_units", "enemy_units")]
 script = ExtResource("8_butv0")
-player_units = [NodePath("../../Units/PlayerUnits/TacticalUnit")]
-enemy_units = [NodePath("../../Units/EnemyUnits/TacticalUnitEnemy")]
+player_units = [null]
+enemy_units = [null]
 
 [node name="Pathfinder" type="Node" parent="Systems" unique_id=801747600]
 script = ExtResource("5_efvkb")

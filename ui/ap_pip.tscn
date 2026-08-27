@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://dtq3la8kfhved"]
+
+[node name="ApPip" type="ColorRect" unique_id=78542367]
+custom_minimum_size = Vector2(20, 20)
+color = Color(1, 1, 1, 0)
