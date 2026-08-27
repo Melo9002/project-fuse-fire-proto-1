@@ -14,9 +14,15 @@ var pathfinder := Pathfinder.new()
 var current_movement_zone: Array[Vector3i] = []
 
 func _ready() -> void:
-	
 	turn_manager.turn_phase_changed.connect(_on_turn_phase_changed)
 	turn_manager.active_unit_changed.connect(_on_active_unit_changed)
+	
+	# Register pathfinder reference with GridManager for automatic graph sync
+	grid_manager.set_pathfinder(pathfinder)
+	
+	for unit_item in turn_manager.player_units + turn_manager.enemy_units:
+		var start_grid = world_to_grid(unit_item.global_position)
+		grid_manager.register_unit(unit_item, start_grid)
 	
 	if not mouse_raycaster or not map_floor or not path_visualizer:
 		push_error("Missing critical node assignments on BattleController!")
@@ -47,17 +53,18 @@ func _ready() -> void:
 	await get_tree().create_timer(0.05).timeout
 	var space_state = get_world_3d().direct_space_state
 	
-	# Create a box shape slightly smaller than cell_size to prevent false positives on adjacent grid walls
 	var cell_box := BoxShape3D.new()
-	cell_box.size = Vector3(cell_size * 0.9, 2.0, cell_size * 0.9)
+	cell_box.size = Vector3(cell_size * 0.85, 1.8, cell_size * 0.85)
 	
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = cell_box
 	query.collide_with_bodies = true
 	query.collide_with_areas = false
 	
-	# Exclude ALL unit RIDs across both rosters from being scanned as wall obstacles
 	var excluded_rids: Array[RID] = []
+	if map_floor and map_floor.has_method("get_rid"):
+		excluded_rids.append(map_floor.get_rid())
+		
 	for unit_item in turn_manager.player_units + turn_manager.enemy_units:
 		if unit_item and unit_item.has_method("get_rid"):
 			excluded_rids.append(unit_item.get_rid())
@@ -68,10 +75,8 @@ func _ready() -> void:
 		var node_id = pathfinder.grid_to_id_map[grid_pos]
 		var world_pos = pathfinder.astar.get_point_position(node_id)
 		
-		# Center the 3D query box over the tile volume
 		query.transform = Transform3D(Basis(), world_pos + Vector3(0, 1.0, 0))
 		
-		# Query up to 1 collision hit within the tile box
 		var hits = space_state.intersect_shape(query, 1)
 		if not hits.is_empty():
 			pathfinder.disable_cell(grid_pos)
@@ -82,7 +87,6 @@ func _ready() -> void:
 	turn_manager.start_battle()
 
 func _process(_delta: float) -> void:
-	# Guard Clause: Disable mouse hover path visuals outside Player Turn
 	if not turn_manager or turn_manager.current_phase != TurnManager.TurnPhase.PLAYER_TURN:
 		path_visualizer.clear_path()
 		return
@@ -97,40 +101,51 @@ func _process(_delta: float) -> void:
 	if tactical_unit.is_moving:
 		return
 		
-	# Only draw the blue path if the mouse is hovering inside a valid yellow tile!
 	if hover_pos != Vector3.ZERO:
 		var hover_grid = world_to_grid(hover_pos)
-		
 		if current_movement_zone.has(hover_grid):
 			var path = _get_path_to_position(hover_pos)
 			if path.size() > 1:
-				path_visualizer.draw_path(path, Color(0.0, 0.5, 1.0, 0.4)) # Translucent Blue
+				path_visualizer.draw_path(path, Color(0.0, 0.5, 1.0, 0.4))
 				return
 				
 	path_visualizer.clear_path()
 
-
 func _on_floor_clicked(raw_position: Vector3) -> void:
-	# Guard Clause: Ignore player input if moving or if it's NOT the player's turn
 	if tactical_unit.is_moving or turn_manager.current_phase != TurnManager.TurnPhase.PLAYER_TURN:
 		return
 		
-	# Refuse to move if the player clicks outside the yellow zone!
+	# Guard: Ensure unit has enough AP to execute a standard move (Cost: 1 AP)
+	const MOVE_AP_COST = 1
+	if not tactical_unit.stats.has_enough_ap(MOVE_AP_COST):
+		print_rich("[color=yellow][BattleController][/color] Unit has no AP remaining!")
+		return
+		
 	var clicked_grid = world_to_grid(raw_position)
 	if not current_movement_zone.has(clicked_grid):
 		return
 		
 	var path = _get_path_to_position(raw_position)
 	if path.size() > 1:
-		path_visualizer.draw_path(path, Color(0.6, 0.1, 0.8, 0.6)) # Translucent Purple
-		tactical_unit.move_along_path(path)
+		# Deduct AP as part of the transaction commit
+		tactical_unit.stats.consume_ap(MOVE_AP_COST)
 		
-		# Hide the yellow zone while the unit is walking
+		var old_grid = world_to_grid(tactical_unit.global_position)
+		path_visualizer.draw_path(path, Color(0.6, 0.1, 0.8, 0.6))
+		tactical_unit.move_along_path(path)
 		path_visualizer.clear_range_zone()
 		
-		# Wait for the unit's signal that it has stopped, then calculate the new zone!
 		await tactical_unit.movement_finished
-		update_unit_movement_zone()
+		
+		var new_grid = world_to_grid(tactical_unit.global_position)
+		grid_manager.update_unit_position(tactical_unit, old_grid, new_grid)
+		
+		# If the unit still has AP left, refresh its movement zone for a second action
+		if tactical_unit.stats.current_ap > 0:
+			update_unit_movement_zone()
+		else:
+			path_visualizer.clear_range_zone()
+			# Optionally auto-end turn or wait for player to hit End Turn
 
 func _on_turn_phase_changed(new_phase: TurnManager.TurnPhase) -> void:
 	var is_player_control = (new_phase == TurnManager.TurnPhase.PLAYER_TURN)
@@ -141,29 +156,38 @@ func _on_turn_phase_changed(new_phase: TurnManager.TurnPhase) -> void:
 
 func _on_active_unit_changed(unit: TacticalUnit) -> void:
 	tactical_unit = unit
-	# Only draw player movement visualizer during the player's turn phase
 	if turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN:
 		update_unit_movement_zone()
 
 # --- HELPER FUNCTIONS ---
 
-# Calculates the yellow movement boundary and draws it to the floor
 func update_unit_movement_zone() -> void:
-	var unit_grid = world_to_grid(tactical_unit.global_position)
-	current_movement_zone = pathfinder.get_reachable_cells(unit_grid, tactical_unit.move_range)
+	if not tactical_unit or tactical_unit.is_moving:
+		return
+		
+	# Retrieve movement capacity dynamically from the unit's stats domain model
+	var movement_budget = tactical_unit.stats.speed if tactical_unit.stats else 6
 	
-	# DEBUG: See what the system thinks is reachable
-	print("Calculated range: ", current_movement_zone.size(), " tiles are reachable.")
+	var unit_grid = world_to_grid(tactical_unit.global_position)
+	var raw_reachable = pathfinder.get_reachable_cells(unit_grid, movement_budget)
+	
+	current_movement_zone = raw_reachable.filter(
+		func(cell: Vector3i) -> bool:
+			if cell == unit_grid:
+				return true
+			return grid_manager.can_unit_occupy_cell(tactical_unit, cell)
+	)
 	
 	path_visualizer.draw_range_zone(current_movement_zone, Color(0.9, 0.8, 0.1, 0.25))
 
-# Asks the pathfinder for a line from the unit to the target
 func _get_path_to_position(target_world_pos: Vector3) -> PackedVector3Array:
 	var start_grid = world_to_grid(tactical_unit.global_position)
 	var end_grid = world_to_grid(target_world_pos)
+	
+	# Hostile nodes are already dynamically managed by GridManager, 
+	# so we can directly query the pathfinder without manual override loops.
 	return pathfinder.calculate_3d_path(start_grid, end_grid)
 
-# Translates a 3D world coordinate into our specific grid index (e.g. 5, 0, 5)
 func world_to_grid(pos: Vector3) -> Vector3i:
 	var half_width = map_floor.size.x / 2.0
 	var half_depth = map_floor.size.z / 2.0

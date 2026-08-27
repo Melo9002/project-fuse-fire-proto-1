@@ -12,6 +12,7 @@
 [ext_resource type="Script" uid="uid://sduodsntgvey" path="res://systems/turn_manager.gd" id="8_butv0"]
 [ext_resource type="Script" uid="uid://cefiwjk6lxrw1" path="res://ui/turn_hud_controller.gd" id="9_6xxhk"]
 [ext_resource type="Script" uid="uid://l6ueyj681aqx" path="res://ui/aphud_controller.gd" id="10_0ueux"]
+[ext_resource type="PackedScene" uid="uid://dtq3la8kfhved" path="res://ui/ap_pip.tscn" id="11_5x462"]
 
 [sub_resource type="Environment" id="Environment_8x357"]
 
@@ -43,6 +44,7 @@ camera = NodePath("../../Camera3D")
 [node name="BattleController" type="Node3D" parent="Systems" unique_id=1810984402 node_paths=PackedStringArray("tactical_unit", "mouse_raycaster", "grid_cursor", "path_visualizer", "map_floor", "grid_manager", "turn_manager")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.72652817, -1.000001, -0.05766487)
 script = ExtResource("3_fg2v6")
+cell_size = null
 tactical_unit = NodePath("../../Units/PlayerUnits/TacticalUnit")
 mouse_raycaster = NodePath("../MouseRaycaster")
 grid_cursor = NodePath("../../Visualizers/GridCursor")
@@ -152,14 +154,14 @@ end_turn_button = NodePath("VBoxContainer/EndTurnButton")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Visualizers/BattleUI/TurnHUDController" unique_id=1056179545]
 layout_mode = 0
-offset_right = 106.0
-offset_bottom = 62.0
+offset_right = 40.0
+offset_bottom = 40.0
 
-[node name="APHUDController" type="HBoxContainer" parent="Visualizers/BattleUI/TurnHUDController/VBoxContainer" unique_id=723238962 node_paths=PackedStringArray("turn_manager", "ap_label")]
+[node name="APHUDController" type="HBoxContainer" parent="Visualizers/BattleUI/TurnHUDController/VBoxContainer" unique_id=723238962 node_paths=PackedStringArray("turn_manager")]
 layout_mode = 2
 script = ExtResource("10_0ueux")
 turn_manager = NodePath("../../../../../Systems/TurnManager")
-ap_label = NodePath("../APDisplayLabel")
+ap_pip_scene = ExtResource("11_5x462")
 
 [node name="TurnLabel" type="Label" parent="Visualizers/BattleUI/TurnHUDController/VBoxContainer" unique_id=282914195]
 layout_mode = 2
@@ -169,6 +171,3 @@ horizontal_alignment = 1
 [node name="EndTurnButton" type="Button" parent="Visualizers/BattleUI/TurnHUDController/VBoxContainer" unique_id=416704309]
 layout_mode = 2
 text = "End Turn"
-
-[node name="APDisplayLabel" type="Label" parent="Visualizers/BattleUI/TurnHUDController/VBoxContainer" unique_id=1990059315]
-layout_mode = 2

@@ -29,7 +29,7 @@ func add_walkable_cell(grid_pos: Vector3i, world_pos: Vector3) -> void:
 			var neighbor_id = grid_to_id_map[neighbor]
 			astar.connect_points(id, neighbor_id) # Draws bidirectional walkway
 
-# The central routing calculation pipeline
+# The central routing calculation pipeline with transactional start-node override
 func calculate_3d_path(start_grid: Vector3i, end_grid: Vector3i) -> PackedVector3Array:
 	if not grid_to_id_map.has(start_grid) or not grid_to_id_map.has(end_grid):
 		return PackedVector3Array() # Return an empty optimized array if out of bounds
@@ -37,15 +37,34 @@ func calculate_3d_path(start_grid: Vector3i, end_grid: Vector3i) -> PackedVector
 	var start_id = grid_to_id_map[start_grid]
 	var end_id = grid_to_id_map[end_grid]
 	
-	return astar.get_point_path(start_id, end_id)
+	# Enterprise Transaction Safeguard: 
+	# A unit cannot path *out* of its own cell if that cell is disabled (occupied).
+	# We temporarily enable the start point for the duration of this routing query.
+	var was_disabled = astar.is_point_disabled(start_id)
+	if was_disabled:
+		astar.set_point_disabled(start_id, false)
+		
+	var point_path = astar.get_point_path(start_id, end_id)
+	
+	# Restore the graph's occupancy state immediately after path extraction
+	if was_disabled:
+		astar.set_point_disabled(start_id, true)
+		
+	return point_path
 
 # --- THE RESTORED FUNCTION ---
 # Finds the unique ID mapped to a 3D coordinate and breaks its grid connections
+## Disables a specific grid cell from A* routing calculations
 func disable_cell(grid_pos: Vector3i) -> void:
 	if grid_to_id_map.has(grid_pos):
-		var target_id = grid_to_id_map[grid_pos]
-		astar.set_point_disabled(target_id, true)
-		print("Graph node disabled at grid position: ", grid_pos)
+		var point_id = grid_to_id_map[grid_pos]
+		astar.set_point_disabled(point_id, true)
+
+## Re-enables a specific grid cell for A* routing calculations
+func enable_cell(grid_pos: Vector3i) -> void:
+	if grid_to_id_map.has(grid_pos):
+		var point_id = grid_to_id_map[grid_pos]
+		astar.set_point_disabled(point_id, false)
 
 
 # BFS algorithm to map every reachable tile within 'max_steps'

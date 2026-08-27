@@ -1,12 +1,16 @@
 extends Node3D
 class_name TacticalUnit
 
+enum Faction { PLAYER, ENEMY, ALLY, NEUTRAL }
+
 # --- 1. THE SIGNAL ---
 # This is the "radio" the BattleController listens for
 signal movement_finished 
 
 @export var movement_speed: float = 5.0
 @export var move_range: int = 10
+@export var faction: Faction = Faction.PLAYER
+@export var stats: UnitStats
 
 var current_path: PackedVector3Array = PackedVector3Array()
 var current_waypoint_idx: int = 0
@@ -37,3 +41,7 @@ func _process(delta: float) -> void:
 	
 	if global_position.distance_to(target_waypoint) < 0.01:
 		current_waypoint_idx += 1
+		
+func finish_movement(old_grid: Vector3i, new_grid: Vector3i, grid_manager: GridManager) -> void:
+	grid_manager.update_unit_position(self, old_grid, new_grid)
+	movement_finished.emit()

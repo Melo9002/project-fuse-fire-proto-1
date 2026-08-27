@@ -22,6 +22,10 @@ func start_battle() -> void:
 	_start_player_turn_phase()
 
 func end_current_turn() -> void:
+	# Guard: Refuse to end turn if the active unit is currently mid-animation/moving
+	if active_unit and active_unit.is_moving:
+		print_rich("[color=yellow][TurnManager][/color] Cannot end turn: Unit is still moving!")
+		return
 	print_rich("[color=yellow][TURN][/color] end_current_turn() called. Current Phase: ", current_phase)
 	if current_phase == TurnPhase.PLAYER_TURN:
 		_advance_player_unit_queue()
@@ -32,11 +36,10 @@ func _start_player_turn_phase() -> void:
 	current_phase = TurnPhase.PLAYER_TURN
 	turn_phase_changed.emit(current_phase)
 	
-	# Refresh AP for all player-controlled units at the start of the team round
+	# Enterprise Refactor: Target "UnitStats" and invoke reset_turn()
 	for unit in player_units:
-		var ap_comp = unit.get_node_or_null("ActionPointComponent") as ActionPointComponent
-		if ap_comp:
-			ap_comp.reset_ap()
+		if unit and unit.stats:
+			unit.stats.reset_turn()
 			
 	active_unit_index = 0
 	if not player_units.is_empty():
@@ -52,15 +55,15 @@ func _advance_player_unit_queue() -> void:
 func _start_enemy_turn_phase() -> void:
 	current_phase = TurnPhase.ENEMY_TURN
 	
+	# Enterprise Refactor: Target "UnitStats" and invoke reset_turn()
 	for unit_item in enemy_units:
-		var ap_comp = unit_item.get_node_or_null("ActionPointComponent") as ActionPointComponent
-		if ap_comp:
-			ap_comp.reset_ap()
+		if unit_item and unit_item.stats:
+			unit_item.stats.reset_turn()
 			
 	active_unit_index = 0
 	if not enemy_units.is_empty():
-		_set_active_unit(enemy_units[0]) # 1. Assign active unit first
-		turn_phase_changed.emit(current_phase) # 2. Emit phase update after
+		_set_active_unit(enemy_units[0]) 
+		turn_phase_changed.emit(current_phase) 
 	else:
 		_end_round()
 

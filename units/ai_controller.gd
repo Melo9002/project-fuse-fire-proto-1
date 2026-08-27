@@ -60,7 +60,7 @@ func _execute_turn() -> void:
 	var world_path: PackedVector3Array = battle_controller.pathfinder.calculate_3d_path(start_grid, end_grid)
 	print_rich("[color=magenta][AI][/color] Calculated %d path points." % world_path.size())
 	
-# 1. PREVENT TILE OVERLAP: Remove target tile so enemy stops adjacent to player
+	# 1. PREVENT TILE OVERLAP: Remove target tile so enemy stops adjacent to player
 	if world_path.size() > 1:
 		var last_tile_grid = battle_controller.world_to_grid(world_path[world_path.size() - 1])
 		if last_tile_grid == end_grid:
@@ -71,8 +71,15 @@ func _execute_turn() -> void:
 		var max_steps: int = min(unit.move_range, world_path.size() - 1)
 		var truncated_path: PackedVector3Array = world_path.slice(0, max_steps + 1)
 		
+		# Record spatial transaction boundaries before executing movement
+		var old_grid: Vector3i = battle_controller.world_to_grid(unit.global_position)
+		
 		unit.move_along_path(truncated_path)
 		await unit.movement_finished
+		
+		# Commit spatial update to GridManager and Pathfinder graph
+		var new_grid: Vector3i = battle_controller.world_to_grid(unit.global_position)
+		battle_controller.grid_manager.update_unit_position(unit, old_grid, new_grid)
 	else:
 		print_rich("[color=yellow][AI][/color] Enemy is already adjacent to target or path is blocked.")
 		
