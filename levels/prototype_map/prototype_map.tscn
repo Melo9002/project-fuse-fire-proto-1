@@ -12,6 +12,7 @@
 [ext_resource type="Script" uid="uid://sduodsntgvey" path="res://systems/turn_manager.gd" id="8_butv0"]
 [ext_resource type="Script" uid="uid://cefiwjk6lxrw1" path="res://ui/turn_hud_controller.gd" id="9_6xxhk"]
 [ext_resource type="Script" uid="uid://l6ueyj681aqx" path="res://ui/aphud_controller.gd" id="10_0ueux"]
+[ext_resource type="Script" uid="uid://ceqxrcr6py18c" path="res://levels/prototype_map/action_hud_controller.gd" id="13_q7tb2"]
 
 [sub_resource type="Environment" id="Environment_8x357"]
 
@@ -103,7 +104,7 @@ material = SubResource("StandardMaterial3D_ebqvm")
 [node name="PlayerUnits" type="Node3D" parent="Units" unique_id=741306922]
 
 [node name="TacticalUnit" parent="Units/PlayerUnits" unique_id=225498665 instance=ExtResource("4_tsi40")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.72652817, 1.000001, 0.05766487)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1, 0.5)
 
 [node name="EnemyUnits" type="Node3D" parent="Units" unique_id=1196483931]
 
@@ -172,3 +173,33 @@ text = "End Turn"
 
 [node name="APDisplayLabel" type="Label" parent="Visualizers/BattleUI/TurnHUDController/VBoxContainer" unique_id=1990059315]
 layout_mode = 2
+
+[node name="ActionHUDController" type="Control" parent="Visualizers/BattleUI" unique_id=353924541 node_paths=PackedStringArray("battle_controller", "move_button", "attack_button", "defend_button")]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("13_q7tb2")
+battle_controller = NodePath("../../../Systems/BattleController")
+move_button = NodePath("ActionBar/MoveButton")
+attack_button = NodePath("ActionBar/AttackButton")
+defend_button = NodePath("ActionBar/DefendButton")
+
+[node name="ActionBar" type="HBoxContainer" parent="Visualizers/BattleUI/ActionHUDController" unique_id=1879535380]
+layout_mode = 0
+offset_left = 222.0
+offset_top = 27.0
+offset_right = 410.0
+offset_bottom = 86.0
+
+[node name="MoveButton" type="Button" parent="Visualizers/BattleUI/ActionHUDController/ActionBar" unique_id=2075728805]
+layout_mode = 2
+text = "Move"
+
+[node name="AttackButton" type="Button" parent="Visualizers/BattleUI/ActionHUDController/ActionBar" unique_id=329368629]
+layout_mode = 2
+text = "Attack"
+
+[node name="DefendButton" type="Button" parent="Visualizers/BattleUI/ActionHUDController/ActionBar" unique_id=1002343883]
+layout_mode = 2
+text = "Defend"

@@ -1,4 +1,4 @@
-extends HBoxContainer # Or a Control/PanelContainer if you prefer a background badge
+extends HBoxContainer
 class_name APHUDController
 
 @export var turn_manager: TurnManager
@@ -32,7 +32,6 @@ func _on_stats_ap_changed(current_ap: int, max_ap: int) -> void:
 
 func _update_ap_display(current_ap: int, max_ap: int) -> void:
 	if ap_label:
-		# Godot 4 string formatting uses C-style %s or string interpolation % [values]
 		ap_label.text = "AP: %d / %d" % [current_ap, max_ap]
 
 func _clear_display() -> void:
