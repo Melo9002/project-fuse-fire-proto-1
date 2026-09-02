@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://c7nrcruyj4khu"]
 
 [ext_resource type="Script" uid="uid://dbww1fki3xm5f" path="res://units/tactical_unit.gd" id="1_bwycf"]
-[ext_resource type="Script" uid="uid://bkh6dyrmx6y7k" path="res://units/unit_stats.gd" id="2_2equr"]
+[ext_resource type="Script" uid="uid://bkh6dyrmx6y7k" path="res://scripts/components/unit_stats.gd" id="2_2equr"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_8x357"]
 
