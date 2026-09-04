@@ -59,8 +59,8 @@ map_floor = NodePath("../../Environment/MapFloor")
 
 [node name="TurnManager" type="Node" parent="Systems" unique_id=1069557217 node_paths=PackedStringArray("player_units", "enemy_units")]
 script = ExtResource("8_butv0")
-player_units = [NodePath("../../Units/PlayerUnits/TacticalUnit")]
-enemy_units = [NodePath("../../Units/EnemyUnits/TacticalUnitEnemy")]
+player_units = [NodePath("../../Units/PlayerUnits/TacticalUnit"), NodePath("../../Units/PlayerUnits/TacticalUnit2")]
+enemy_units = [NodePath("../../Units/EnemyUnits/TacticalUnitEnemy"), NodePath("../../Units/EnemyUnits/TacticalUnitEnemy2")]
 
 [node name="Pathfinder" type="Node" parent="Systems" unique_id=801747600]
 script = ExtResource("5_efvkb")
@@ -107,15 +107,28 @@ material = SubResource("StandardMaterial3D_ebqvm")
 [node name="TacticalUnit" parent="Units/PlayerUnits" unique_id=225498665 instance=ExtResource("4_tsi40")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1, 0.5)
 
+[node name="TacticalUnit2" parent="Units/PlayerUnits" unique_id=225498666 instance=ExtResource("4_tsi40")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 1, 0.5)
+
 [node name="EnemyUnits" type="Node3D" parent="Units" unique_id=1196483931]
 
 [node name="TacticalUnitEnemy" parent="Units/EnemyUnits" unique_id=184559395 instance=ExtResource("4_tsi40")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 1, 5.5)
 faction = 1
 
+[node name="TacticalUnitEnemy2" parent="Units/EnemyUnits" unique_id=184559396 instance=ExtResource("4_tsi40")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.5, 1, 5.5)
+faction = 1
+
 [node name="AIController" type="Node" parent="Units/EnemyUnits" unique_id=1999439885 node_paths=PackedStringArray("unit", "turn_manager", "battle_controller")]
 script = ExtResource("7_q7tb2")
 unit = NodePath("../TacticalUnitEnemy")
+turn_manager = NodePath("../../../Systems/TurnManager")
+battle_controller = NodePath("../../../Systems/BattleController")
+
+[node name="AIController2" type="Node" parent="Units/EnemyUnits" unique_id=1999439886 node_paths=PackedStringArray("unit", "turn_manager", "battle_controller")]
+script = ExtResource("7_q7tb2")
+unit = NodePath("../TacticalUnitEnemy2")
 turn_manager = NodePath("../../../Systems/TurnManager")
 battle_controller = NodePath("../../../Systems/BattleController")
 

@@ -11,6 +11,7 @@ func _ready() -> void:
 		
 	# Decoupled Signal Listener (Observer Pattern)
 	turn_manager.active_unit_changed.connect(_on_active_unit_changed)
+	unit.defeated.connect(_on_unit_defeated)
 
 
 func _validate_dependencies() -> bool:
@@ -49,7 +50,18 @@ func _execute_turn() -> void:
 		turn_manager.end_current_turn()
 		return
 		
-	var target_player: TacticalUnit = turn_manager.player_units.front()
+	var target_player = _find_nearest_player()
+	if not target_player:
+		turn_manager.end_current_turn()
+		return
+
+	if battle_controller.try_attack(unit, target_player):
+		await get_tree().create_timer(0.25).timeout
+		if is_instance_valid(target_player) and battle_controller.can_attack(unit, target_player):
+			battle_controller.try_attack(unit, target_player)
+		turn_manager.end_current_turn()
+		return
+
 	# Resolve grid coordinates through the BattleController service
 	var start_grid: Vector3i = battle_controller.world_to_grid(unit.global_position)
 	var end_grid: Vector3i = battle_controller.world_to_grid(target_player.global_position)
@@ -74,13 +86,31 @@ func _execute_turn() -> void:
 		# Record spatial transaction boundaries before executing movement
 		var old_grid: Vector3i = battle_controller.world_to_grid(unit.global_position)
 		
+		unit.stats.consume_ap(1)
 		unit.move_along_path(truncated_path)
 		await unit.movement_finished
 		
 		# Commit spatial update to GridManager and Pathfinder graph
 		var new_grid: Vector3i = battle_controller.world_to_grid(unit.global_position)
 		battle_controller.grid_manager.update_unit_position(unit, old_grid, new_grid)
+		if is_instance_valid(target_player) and battle_controller.can_attack(unit, target_player):
+			battle_controller.try_attack(unit, target_player)
 	else:
 		print_rich("[color=yellow][AI][/color] Enemy is already adjacent to target or path is blocked.")
 		
 	turn_manager.end_current_turn()
+
+func _find_nearest_player() -> TacticalUnit:
+	var nearest: TacticalUnit
+	var nearest_distance := INF
+	for candidate in turn_manager.player_units:
+		if not is_instance_valid(candidate) or not candidate.stats or candidate.stats.is_defeated:
+			continue
+		var distance = unit.global_position.distance_squared_to(candidate.global_position)
+		if distance < nearest_distance:
+			nearest = candidate
+			nearest_distance = distance
+	return nearest
+
+func _on_unit_defeated(_defeated_unit: TacticalUnit) -> void:
+	queue_free()

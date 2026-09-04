@@ -31,9 +31,26 @@ func end_current_turn() -> void:
 		
 	print_rich("[color=yellow][TURN][/color] end_current_turn() called. Current Phase: ", current_phase)
 	if current_phase == TurnPhase.PLAYER_TURN:
-		_advance_player_unit_queue()
+		_start_enemy_turn_phase()
 	elif current_phase == TurnPhase.ENEMY_TURN:
 		_advance_enemy_unit_queue()
+
+func select_player_unit(unit: TacticalUnit) -> bool:
+	if current_phase != TurnPhase.PLAYER_TURN:
+		return false
+	if not is_instance_valid(unit) or not player_units.has(unit):
+		return false
+	if not unit.stats or unit.stats.current_ap <= 0 or unit.is_moving:
+		return false
+
+	_set_active_unit(unit)
+	return true
+
+func remove_unit(unit: TacticalUnit) -> void:
+	player_units.erase(unit)
+	enemy_units.erase(unit)
+	if active_unit == unit:
+		active_unit = null
 
 # --- ENTERPRISE AP & PHASE AUTOMATION ---
 
@@ -65,18 +82,10 @@ func _start_player_turn_phase() -> void:
 		if is_instance_valid(unit) and unit.stats:
 			unit.stats.reset_turn()
 			
-	active_unit_index = 0
 	if not player_units.is_empty():
 		_set_active_unit(player_units[0])
 		
 	turn_phase_changed.emit(current_phase)
-
-func _advance_player_unit_queue() -> void:
-	active_unit_index += 1
-	if active_unit_index < player_units.size():
-		_set_active_unit(player_units[active_unit_index])
-	else:
-		_start_enemy_turn_phase()
 
 func _start_enemy_turn_phase() -> void:
 	current_phase = TurnPhase.ENEMY_TURN

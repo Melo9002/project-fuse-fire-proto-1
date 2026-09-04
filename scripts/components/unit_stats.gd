@@ -9,6 +9,7 @@ signal hp_changed(current: int, max_hp: int)
 signal sp_changed(current: int, max_sp: int)
 signal ap_changed(current: int, max_ap: int)
 signal status_changed
+signal defeated
 
 @export_group("Health")
 @export var max_hp: int = 100:
@@ -55,6 +56,8 @@ var is_defending: bool = false:
 			is_defending = value
 			status_changed.emit()
 
+var is_defeated: bool = false
+
 func _ready() -> void:
 	current_hp = max_hp
 	current_sp = max_sp
@@ -81,12 +84,18 @@ func restore_sp_to_max() -> void:
 	current_sp = max_sp
 
 func take_damage(amount: int) -> void:
+	if is_defeated:
+		return
+
 	var final_damage = amount
 	if is_defending:
 		final_damage = int(amount * 0.5)
 		
 	current_hp -= final_damage
 	print_rich("[color=orange][UnitStats][/color] %s took %d damage (HP: %d/%d)" % [get_parent().name, final_damage, current_hp, max_hp])
+	if current_hp == 0:
+		is_defeated = true
+		defeated.emit()
 
 func reset_turn_statuses() -> void:
 	is_defending = false

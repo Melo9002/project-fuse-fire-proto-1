@@ -3,10 +3,12 @@ class_name TacticalUnit
 
 enum Faction { PLAYER, ENEMY, ALLY, NEUTRAL }
 
-signal movement_finished 
+signal movement_finished
+signal defeated(unit: TacticalUnit)
 
 @export var movement_speed: float = 5.0
 @export var move_range: int = 10
+@export var attack_range: int = 3
 @export var faction: Faction = Faction.PLAYER
 @export var stats: UnitStats
 @export var unit_hud_scene: PackedScene = preload("res://ui/unit_world_bar.tscn")
@@ -16,7 +18,12 @@ var current_waypoint_idx: int = 0
 var is_moving: bool = false
 
 func _ready() -> void:
+	if stats:
+		stats.defeated.connect(_on_stats_defeated)
 	_spawn_world_hud()
+
+func _on_stats_defeated() -> void:
+	defeated.emit(self)
 
 func _process(delta: float) -> void:
 	if not is_moving: 

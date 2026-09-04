@@ -30,6 +30,7 @@ func _ready() -> void:
 		
 	# Subscribe to mediator state broadcasts
 	battle_controller.move_mode_toggled.connect(_on_move_mode_toggled)
+	battle_controller.attack_mode_toggled.connect(_on_attack_mode_toggled)
 	
 	var turn_mgr = battle_controller.turn_manager
 	if turn_mgr:
@@ -69,15 +70,7 @@ func _on_move_pressed() -> void:
 	battle_controller.toggle_move_mode()
 
 func _on_attack_pressed() -> void:
-	var active_unit = battle_controller.tactical_unit
-	if not active_unit or active_unit.is_moving:
-		return
-		
-	var target_enemy = _find_placeholder_target()
-	if target_enemy:
-		var attack_cmd = AttackAction.new(active_unit, target_enemy, 1)
-		if attack_cmd.execute():
-			battle_controller.is_move_mode_active = false
+	battle_controller.toggle_attack_mode()
 
 func _on_defend_pressed() -> void:
 	var active_unit = battle_controller.tactical_unit
@@ -103,6 +96,10 @@ func _on_move_mode_toggled(is_active: bool) -> void:
 	if move_button:
 		move_button.text = "Cancel Move" if is_active else "Move (1 AP)"
 
+func _on_attack_mode_toggled(is_active: bool) -> void:
+	if attack_button:
+		attack_button.text = "Cancel Attack" if is_active else "Attack (1 AP)"
+
 func _on_turn_phase_changed(new_phase: TurnManager.TurnPhase) -> void:
 	visible = (new_phase == TurnManager.TurnPhase.PLAYER_TURN)
 	_update_button_states()
@@ -116,13 +113,12 @@ func _update_button_states() -> void:
 		return
 
 	var has_ap = stats.current_ap >= 1
-	var has_sp = stats.current_sp >= 1
 	var needs_sp = stats.current_sp < stats.max_sp
 	
 	if move_button:
 		move_button.disabled = not has_ap
 	if attack_button:
-		attack_button.disabled = not (has_ap and has_sp)
+		attack_button.disabled = not has_ap
 	if defend_button:
 		defend_button.disabled = not has_ap
 	if resupply_button:
@@ -133,14 +129,3 @@ func _disable_all_buttons() -> void:
 	if attack_button: attack_button.disabled = true
 	if defend_button: defend_button.disabled = true
 	if resupply_button: resupply_button.disabled = true
-
-func _find_placeholder_target() -> TacticalUnit:
-	if not battle_controller.turn_manager:
-		return null
-		
-	var enemies = battle_controller.turn_manager.enemy_units
-	for enemy in enemies:
-		if is_instance_valid(enemy) and enemy.stats:
-			if enemy.stats.current_hp > 0:
-				return enemy
-	return null

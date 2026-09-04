@@ -2,6 +2,7 @@ extends Node3D
 class_name BattleController
 
 signal move_mode_toggled(is_active: bool)
+signal attack_mode_toggled(is_active: bool)
 
 @export var cell_size: float = 1.0
 @export var tactical_unit: TacticalUnit
@@ -16,6 +17,7 @@ const UNIFORM_AP_COST = 1
 
 var pathfinder := Pathfinder.new()
 var current_movement_zone: Array[Vector3i] = []
+var current_attack_zone: Array[Vector3i] = []
 
 # Move Mode state authorization flag
 var is_move_mode_active: bool = false:
@@ -27,6 +29,14 @@ var is_move_mode_active: bool = false:
 				path_visualizer.clear_path()
 				path_visualizer.clear_range_zone()
 
+var is_attack_mode_active: bool = false:
+	set(value):
+		if is_attack_mode_active != value:
+			is_attack_mode_active = value
+			attack_mode_toggled.emit(is_attack_mode_active)
+			if not is_attack_mode_active:
+				path_visualizer.clear_range_zone()
+
 func _ready() -> void:
 	turn_manager.turn_phase_changed.connect(_on_turn_phase_changed)
 	turn_manager.active_unit_changed.connect(_on_active_unit_changed)
@@ -35,12 +45,14 @@ func _ready() -> void:
 	for unit_item in turn_manager.player_units + turn_manager.enemy_units:
 		var start_grid = world_to_grid(unit_item.global_position)
 		grid_manager.register_unit(unit_item, start_grid)
+		unit_item.defeated.connect(_on_unit_defeated)
 	
 	if not mouse_raycaster or not map_floor or not path_visualizer:
 		push_error("Missing critical node assignments on BattleController!")
 		return
 		
 	mouse_raycaster.floor_clicked.connect(_on_floor_clicked)
+	mouse_raycaster.unit_clicked.connect(_on_unit_clicked)
 	_build_floor_graph()
 	_perform_volume_scan()
 	
@@ -50,30 +62,56 @@ func toggle_move_mode() -> void:
 	if turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN:
 		is_move_mode_active = not is_move_mode_active
 		if is_move_mode_active:
+			is_attack_mode_active = false
+		if is_move_mode_active:
 			update_unit_movement_zone()
+
+func toggle_attack_mode() -> void:
+	if turn_manager.current_phase != TurnManager.TurnPhase.PLAYER_TURN:
+		return
+	if not tactical_unit or not tactical_unit.stats or tactical_unit.stats.current_ap < UNIFORM_AP_COST:
+		return
+
+	if is_attack_mode_active:
+		is_attack_mode_active = false
+		return
+
+	if is_move_mode_active:
+		is_move_mode_active = false
+	is_attack_mode_active = true
+	update_attack_range()
 
 func _process(_delta: float) -> void:
 	if not turn_manager or turn_manager.current_phase != TurnManager.TurnPhase.PLAYER_TURN:
 		return
 		
-	var hover_pos = mouse_raycaster.get_raycast_result() if mouse_raycaster else Vector3.ZERO
-	if hover_pos != Vector3.ZERO and grid_cursor:
-		grid_cursor.update_hover_position(hover_pos)
+	var floor_hit = mouse_raycaster.get_floor_raycast_result() if mouse_raycaster else {}
+	if not floor_hit.is_empty() and grid_cursor:
+		grid_cursor.update_hover_position(floor_hit.position)
 		
 	# Enterprise Guard: Hover paths rendered ONLY in Move Mode
 	if not is_move_mode_active or tactical_unit.is_moving:
 		path_visualizer.clear_path()
 		return
 		
-	if hover_pos != Vector3.ZERO:
-		var hover_grid = world_to_grid(hover_pos)
+	if not floor_hit.is_empty():
+		var hover_grid = world_to_grid(floor_hit.position)
 		if current_movement_zone.has(hover_grid):
-			var path = _get_path_to_position(hover_pos)
+			var path = _get_path_to_position(floor_hit.position)
 			if path.size() > 1:
 				path_visualizer.draw_path(path, Color(0.0, 0.5, 1.0, 0.4))
 				return
 				
 	path_visualizer.clear_path()
+
+func _on_unit_clicked(unit: TacticalUnit) -> void:
+	if is_attack_mode_active and unit.faction == TacticalUnit.Faction.ENEMY:
+		try_attack(tactical_unit, unit)
+		return
+
+	if turn_manager.select_player_unit(unit):
+		is_move_mode_active = false
+		is_attack_mode_active = false
 
 # Inside BattleController.gd
 
@@ -110,10 +148,12 @@ func _on_turn_phase_changed(new_phase: TurnManager.TurnPhase) -> void:
 	grid_cursor.visible = is_player_control
 	if not is_player_control:
 		is_move_mode_active = false
+		is_attack_mode_active = false
 
 func _on_active_unit_changed(unit: TacticalUnit) -> void:
 	tactical_unit = unit
 	is_move_mode_active = false
+	is_attack_mode_active = false
 
 func update_unit_movement_zone() -> void:
 	if not tactical_unit or tactical_unit.is_moving:
@@ -131,6 +171,28 @@ func update_unit_movement_zone() -> void:
 	)
 	
 	path_visualizer.draw_range_zone(current_movement_zone, Color(0.9, 0.8, 0.1, 0.25))
+
+func update_attack_range() -> void:
+	current_attack_zone.clear()
+	if not tactical_unit or not tactical_unit.stats:
+		path_visualizer.clear_range_zone()
+		return
+
+	var attacker_grid = world_to_grid(tactical_unit.global_position)
+	for grid_pos in pathfinder.grid_to_id_map.keys():
+		var point_id = pathfinder.grid_to_id_map[grid_pos]
+		if pathfinder.astar.is_point_disabled(point_id):
+			continue
+
+		var distance = absi(attacker_grid.x - grid_pos.x) + absi(attacker_grid.y - grid_pos.y) + absi(attacker_grid.z - grid_pos.z)
+		if distance == 0 or distance > tactical_unit.attack_range:
+			continue
+
+		var world_pos = grid_manager.grid_to_world(grid_pos)
+		if has_line_of_sight_to_position(tactical_unit, world_pos):
+			current_attack_zone.append(grid_pos)
+
+	path_visualizer.draw_range_zone(current_attack_zone, Color(0.95, 0.2, 0.2, 0.3))
 
 func _get_path_to_position(target_world_pos: Vector3) -> PackedVector3Array:
 	var start_grid = world_to_grid(tactical_unit.global_position)
@@ -187,7 +249,52 @@ func _perform_volume_scan() -> void:
 		if not hits.is_empty():
 			pathfinder.disable_cell(grid_pos)
 			
-func dispatch_attack(target_enemy: TacticalUnit) -> void:
-	var attack_cmd = AttackAction.new(tactical_unit, target_enemy, UNIFORM_AP_COST)
-	if attack_cmd.execute():
-		is_move_mode_active = false
+func can_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:
+	if not is_instance_valid(attacker) or not is_instance_valid(target):
+		return false
+	if not attacker.stats or not target.stats or attacker.stats.is_defeated or target.stats.is_defeated:
+		return false
+	if attacker.faction == target.faction:
+		return false
+
+	var attacker_grid = world_to_grid(attacker.global_position)
+	var target_grid = world_to_grid(target.global_position)
+	var grid_distance = absi(attacker_grid.x - target_grid.x) + absi(attacker_grid.y - target_grid.y) + absi(attacker_grid.z - target_grid.z)
+	if grid_distance > attacker.attack_range:
+		return false
+
+	return has_line_of_sight(attacker, target)
+
+func try_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:
+	if not can_attack(attacker, target):
+		return false
+
+	var attack_cmd = AttackAction.new(attacker, target, UNIFORM_AP_COST)
+	if not attack_cmd.execute():
+		return false
+
+	is_attack_mode_active = false
+	is_move_mode_active = false
+	return true
+
+func has_line_of_sight(attacker: TacticalUnit, target: TacticalUnit) -> bool:
+	return has_line_of_sight_to_position(attacker, target.global_position)
+
+func has_line_of_sight_to_position(attacker: TacticalUnit, destination: Vector3) -> bool:
+	var origin = attacker.global_position + Vector3.UP * 0.6
+	destination += Vector3.UP * 0.6
+	var query = PhysicsRayQueryParameters3D.create(origin, destination)
+	query.collision_mask = 1
+	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+
+func _on_unit_defeated(unit: TacticalUnit) -> void:
+	if not is_instance_valid(unit):
+		return
+
+	grid_manager.unregister_unit_at(world_to_grid(unit.global_position))
+	turn_manager.remove_unit(unit)
+	if tactical_unit == unit:
+		tactical_unit = null
+	is_move_mode_active = false
+	is_attack_mode_active = false
+	unit.queue_free()

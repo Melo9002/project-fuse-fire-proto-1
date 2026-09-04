@@ -23,32 +23,20 @@ func register_unit(unit: TacticalUnit, grid_pos: Vector3i) -> void:
 	print_rich("[color=cyan][GridManager][/color] Registered unit [b]%s[/b] at %s | Faction: %s" % [unit.name, grid_pos, unit.faction])
 	unit_registered.emit(unit, grid_pos)
 	
-	# Automatically disable A* node if it's an enemy blocking unit
-	if pathfinder and unit.faction != TacticalUnit.Faction.PLAYER:
-		pathfinder.disable_cell(grid_pos)
-		print_rich("[color=magenta][Pathfinder][/color] Disabled enemy cell at %s" % grid_pos)
 
 func unregister_unit_at(grid_pos: Vector3i) -> void:
 	if occupancy_map.has(grid_pos):
 		var unit = occupancy_map[grid_pos]
 		occupancy_map.erase(grid_pos)
-		if pathfinder:
-			pathfinder.enable_cell(grid_pos)
 		unit_unregistered.emit(unit, grid_pos)
 
 func update_unit_position(unit: TacticalUnit, from_grid: Vector3i, to_grid: Vector3i) -> void:
-	# 1. Clear old position and re-enable the old A* cell
+	# 1. Clear old position. Occupancy never changes terrain walkability.
 	if occupancy_map.get(from_grid) == unit:
 		occupancy_map.erase(from_grid)
-		if pathfinder:
-			pathfinder.enable_cell(from_grid)
-			print_rich("[color=magenta][Pathfinder][/color] Re-enabled cleared cell at %s" % from_grid)
 			
-	# 2. Set new position and disable the new A* cell if it's an enemy blocking unit
+	# 2. Set the new occupancy entry without mutating the terrain path graph.
 	occupancy_map[to_grid] = unit
-	if pathfinder and unit.faction != TacticalUnit.Faction.PLAYER:
-		pathfinder.disable_cell(to_grid)
-		print_rich("[color=magenta][Pathfinder][/color] Disabled new enemy cell at %s" % to_grid)
 
 func is_cell_occupied(grid_pos: Vector3i) -> bool:
 	return occupancy_map.has(grid_pos)
