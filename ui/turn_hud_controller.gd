@@ -11,6 +11,7 @@ func _ready() -> void:
 		return
 	turn_manager.turn_phase_changed.connect(_on_turn_phase_changed)
 	turn_manager.battle_ended.connect(_on_battle_ended)
+	turn_manager.player_actions_exhausted.connect(_on_player_actions_exhausted)
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
 
 func _on_turn_phase_changed(new_phase: TurnManager.TurnPhase) -> void:
@@ -19,6 +20,8 @@ func _on_turn_phase_changed(new_phase: TurnManager.TurnPhase) -> void:
 			turn_label.text = "PLAYER TURN"
 			turn_label.modulate = Color.GREEN
 			end_turn_button.disabled = false
+			end_turn_button.text = "End Turn"
+			end_turn_button.modulate = Color.WHITE
 		TurnManager.TurnPhase.ENEMY_TURN:
 			turn_label.text = "ENEMY TURN"
 			turn_label.modulate = Color.RED
@@ -41,3 +44,7 @@ func _on_battle_ended(result: TurnManager.BattleResult) -> void:
 	else:
 		turn_label.text = "DEFEAT"
 		turn_label.modulate = Color.RED
+
+func _on_player_actions_exhausted() -> void:
+	end_turn_button.text = "END TURN — NO AP"
+	end_turn_button.modulate = Color(1.0, 0.8, 0.2)

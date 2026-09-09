@@ -10,6 +10,10 @@ The match setup screen accepts 1–5 player units and 1–5 enemy units. The bat
 
 During battle, the bottom portrait bar mirrors the friendly roster. Each Bean card shows HP, AP, and its selected, ready, exhausted, or dead state. Clicking a ready portrait selects the same unit in the battlefield.
 
+The selected friendly also receives a thin cyan outline in the battlefield. The outline follows selection from either the world or portrait bar and clears during the enemy phase.
+
+When the selected unit spends its final AP, selection advances through the friendly roster to the next living unit with AP. If nobody can act, the game remains in the player phase for inspection and highlights End Turn.
+
 | Control | Effect |
 | --- | --- |
 | Click a player unit | Select it if it has AP remaining |

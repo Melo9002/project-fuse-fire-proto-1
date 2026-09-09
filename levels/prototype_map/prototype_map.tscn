@@ -16,6 +16,7 @@
 [ext_resource type="Script" path="res://systems/spawning/spawn_zone.gd" id="17_zone"]
 [ext_resource type="Script" path="res://ui/unit_portrait_bar.gd" id="18_portrait_bar"]
 [ext_resource type="PackedScene" path="res://ui/unit_portrait.tscn" id="19_portrait"]
+[ext_resource type="Script" path="res://visualizers/unit_selection_visualizer.gd" id="20_selection"]
 
 [sub_resource type="Environment" id="Environment_8x357"]
 
@@ -174,6 +175,10 @@ highlight_color = Color(0.9999594, 0.122358926, 0.10734794, 0.8)
 [node name="PathVisualizer" type="Node3D" parent="Visualizers" unique_id=916084487 node_paths=PackedStringArray("grid_manager")]
 script = ExtResource("6_8rqs0")
 grid_manager = NodePath("../../Systems/GridManager")
+
+[node name="UnitSelectionVisualizer" type="Node" parent="Visualizers" node_paths=PackedStringArray("turn_manager")]
+script = ExtResource("20_selection")
+turn_manager = NodePath("../../Systems/TurnManager")
 
 [node name="BattleUI" type="CanvasLayer" parent="Visualizers" unique_id=1620723361 groups=["UI_LAYER"]]
 follow_viewport_enabled = true

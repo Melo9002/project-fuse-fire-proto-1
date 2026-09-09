@@ -8,6 +8,7 @@ signal turn_phase_changed(new_phase: TurnPhase)
 signal active_unit_changed(unit: TacticalUnit)
 signal round_started(round_number: int)
 signal battle_ended(result: BattleResult)
+signal player_actions_exhausted
 
 @export_group("Battle Roster")
 @export var player_units: Array[TacticalUnit] = []
@@ -21,6 +22,10 @@ var battle_result: BattleResult = BattleResult.ONGOING
 
 func start_battle() -> void:
 	battle_result = BattleResult.ONGOING
+	for unit in player_units:
+		var callback = _on_player_ap_changed.bind(unit)
+		if unit.stats and not unit.stats.ap_changed.is_connected(callback):
+			unit.stats.ap_changed.connect(callback)
 	current_round = 1
 	round_started.emit(current_round)
 	_start_player_turn_phase()
@@ -60,6 +65,27 @@ func is_any_unit_moving() -> bool:
 		if is_instance_valid(unit) and unit.is_moving:
 			return true
 	return false
+
+func _on_player_ap_changed(current: int, _maximum: int, unit: TacticalUnit) -> void:
+	if current == 0:
+		_advance_selection_if_needed.call_deferred(unit)
+
+func _advance_selection_if_needed(exhausted_unit: TacticalUnit) -> void:
+	if is_instance_valid(exhausted_unit) and exhausted_unit.is_moving:
+		await exhausted_unit.movement_finished
+	if current_phase != TurnPhase.PLAYER_TURN or active_unit != exhausted_unit:
+		return
+	if not is_instance_valid(exhausted_unit) or not exhausted_unit.stats or exhausted_unit.stats.current_ap > 0:
+		return
+
+	var start_index = player_units.find(exhausted_unit)
+	for offset in range(1, player_units.size() + 1):
+		var candidate = player_units[(start_index + offset) % player_units.size()]
+		if is_instance_valid(candidate) and candidate.stats and not candidate.stats.is_defeated \
+			and candidate.stats.current_ap > 0:
+			_set_active_unit(candidate)
+			return
+	player_actions_exhausted.emit()
 
 func _check_battle_result() -> void:
 	if battle_result != BattleResult.ONGOING:
