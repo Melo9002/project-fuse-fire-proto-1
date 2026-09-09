@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="ProjectFuseFire_Proto1"
-run/main_scene="uid://bii4xkuqqjtgc"
+run/main_scene="res://ui/match_setup.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 

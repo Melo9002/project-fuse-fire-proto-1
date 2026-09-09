@@ -46,14 +46,15 @@ func _ready() -> void:
 
 	turn_manager.turn_phase_changed.connect(_on_turn_phase_changed)
 	turn_manager.active_unit_changed.connect(_on_active_unit_changed)
+	mouse_raycaster.floor_clicked.connect(_on_floor_clicked)
+	mouse_raycaster.unit_clicked.connect(_on_unit_clicked)
 
+func initialize_battle() -> void:
 	for unit_item in turn_manager.player_units + turn_manager.enemy_units:
 		var start_grid = world_to_grid(unit_item.global_position)
 		grid_manager.register_unit(unit_item, start_grid)
 		unit_item.defeated.connect(_on_unit_defeated)
 
-	mouse_raycaster.floor_clicked.connect(_on_floor_clicked)
-	mouse_raycaster.unit_clicked.connect(_on_unit_clicked)
 	MapBuilder.build(grid_manager, pathfinder)
 	# Let CSG collision bodies enter the physics world before scanning.
 	await get_tree().create_timer(0.05).timeout

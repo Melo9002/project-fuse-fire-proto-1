@@ -7,12 +7,13 @@
 [ext_resource type="Script" uid="uid://cf02ctu30b6hm" path="res://visualizers/grid_cursor.gd" id="5_q85eh"]
 [ext_resource type="Script" uid="uid://ddyyfvx30kuoe" path="res://visualizers/path_visualizer.gd" id="6_8rqs0"]
 [ext_resource type="Script" uid="uid://xam0a3oofrn" path="res://systems/grid/grid_manager.gd" id="7_ao12l"]
-[ext_resource type="Script" uid="uid://dahqrjsr7c5u8" path="res://units/ai_controller.gd" id="7_q7tb2"]
 [ext_resource type="Script" uid="uid://sduodsntgvey" path="res://systems/turn_manager.gd" id="8_butv0"]
 [ext_resource type="Script" uid="uid://cefiwjk6lxrw1" path="res://ui/turn_hud_controller.gd" id="9_6xxhk"]
 [ext_resource type="Script" uid="uid://l6ueyj681aqx" path="res://ui/aphud_controller.gd" id="10_0ueux"]
 [ext_resource type="Script" uid="uid://ceqxrcr6py18c" path="res://ui/action_hud_controller.gd" id="13_q7tb2"]
 [ext_resource type="Script" path="res://systems/camera/tactical_camera.gd" id="15_camera"]
+[ext_resource type="Script" path="res://levels/prototype_map/battle_level.gd" id="16_level"]
+[ext_resource type="Script" path="res://systems/spawning/spawn_zone.gd" id="17_zone"]
 
 [sub_resource type="Environment" id="Environment_8x357"]
 
@@ -27,7 +28,15 @@ albedo_color = Color(1, 0, 0.023529412, 1)
 
 [sub_resource type="CompressedTexture2D" id="CompressedTexture2D_ebqvm"]
 
-[node name="BattleLevel" type="Node3D" unique_id=1534168603]
+[node name="BattleLevel" type="Node3D" unique_id=1534168603 node_paths=PackedStringArray("player_spawn_zone", "enemy_spawn_zone", "player_units_parent", "enemy_units_parent", "turn_manager", "battle_controller")]
+script = ExtResource("16_level")
+unit_scene = ExtResource("4_tsi40")
+player_spawn_zone = NodePath("SpawnZones/PlayerSpawnZone")
+enemy_spawn_zone = NodePath("SpawnZones/EnemySpawnZone")
+player_units_parent = NodePath("Units/PlayerUnits")
+enemy_units_parent = NodePath("Units/EnemyUnits")
+turn_manager = NodePath("Systems/TurnManager")
+battle_controller = NodePath("Systems/BattleController")
 
 [node name="CameraRig" type="Node3D" parent="." node_paths=PackedStringArray("map_floor", "camera")]
 rotation_degrees = Vector3(-45, 0, 0)
@@ -47,10 +56,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.72652817, -1.000001, -0.05
 script = ExtResource("1_822c8")
 camera = NodePath("../../CameraRig/Camera3D")
 
-[node name="BattleController" type="Node3D" parent="Systems" unique_id=1810984402 node_paths=PackedStringArray("tactical_unit", "mouse_raycaster", "grid_cursor", "path_visualizer", "grid_manager", "turn_manager")]
+[node name="BattleController" type="Node3D" parent="Systems" unique_id=1810984402 node_paths=PackedStringArray("mouse_raycaster", "grid_cursor", "path_visualizer", "grid_manager", "turn_manager")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.72652817, -1.000001, -0.05766487)
 script = ExtResource("3_fg2v6")
-tactical_unit = NodePath("../../Units/PlayerUnits/TacticalUnit")
 mouse_raycaster = NodePath("../MouseRaycaster")
 grid_cursor = NodePath("../../Visualizers/GridCursor")
 path_visualizer = NodePath("../../Visualizers/PathVisualizer")
@@ -61,10 +69,8 @@ turn_manager = NodePath("../TurnManager")
 script = ExtResource("7_ao12l")
 map_floor = NodePath("../../Environment/MapFloor")
 
-[node name="TurnManager" type="Node" parent="Systems" unique_id=1069557217 node_paths=PackedStringArray("player_units", "enemy_units")]
+[node name="TurnManager" type="Node" parent="Systems" unique_id=1069557217]
 script = ExtResource("8_butv0")
-player_units = [NodePath("../../Units/PlayerUnits/TacticalUnit"), NodePath("../../Units/PlayerUnits/TacticalUnit2")]
-enemy_units = [NodePath("../../Units/EnemyUnits/TacticalUnitEnemy"), NodePath("../../Units/EnemyUnits/TacticalUnitEnemy2")]
 
 
 [node name="Environment" type="Node3D" parent="." unique_id=1970157743]
@@ -106,33 +112,47 @@ material = SubResource("StandardMaterial3D_ebqvm")
 
 [node name="PlayerUnits" type="Node3D" parent="Units" unique_id=741306922]
 
-[node name="TacticalUnit" parent="Units/PlayerUnits" unique_id=225498665 instance=ExtResource("4_tsi40")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1, 0.5)
-
-[node name="TacticalUnit2" parent="Units/PlayerUnits" unique_id=225498666 instance=ExtResource("4_tsi40")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 1, 0.5)
-
 [node name="EnemyUnits" type="Node3D" parent="Units" unique_id=1196483931]
 
-[node name="TacticalUnitEnemy" parent="Units/EnemyUnits" unique_id=184559395 instance=ExtResource("4_tsi40")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 1, 5.5)
+[node name="SpawnZones" type="Node3D" parent="."]
+
+[node name="PlayerSpawnZone" type="Node3D" parent="SpawnZones"]
+script = ExtResource("17_zone")
+faction = 0
+
+[node name="Point1" type="Marker3D" parent="SpawnZones/PlayerSpawnZone"]
+position = Vector3(0.5, 1, 0.5)
+
+[node name="Point2" type="Marker3D" parent="SpawnZones/PlayerSpawnZone"]
+position = Vector3(-1.5, 1, 0.5)
+
+[node name="Point3" type="Marker3D" parent="SpawnZones/PlayerSpawnZone"]
+position = Vector3(-3.5, 1, 0.5)
+
+[node name="Point4" type="Marker3D" parent="SpawnZones/PlayerSpawnZone"]
+position = Vector3(0.5, 1, -1.5)
+
+[node name="Point5" type="Marker3D" parent="SpawnZones/PlayerSpawnZone"]
+position = Vector3(-1.5, 1, -1.5)
+
+[node name="EnemySpawnZone" type="Node3D" parent="SpawnZones"]
+script = ExtResource("17_zone")
 faction = 1
 
-[node name="TacticalUnitEnemy2" parent="Units/EnemyUnits" unique_id=184559396 instance=ExtResource("4_tsi40")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.5, 1, 5.5)
-faction = 1
+[node name="Point1" type="Marker3D" parent="SpawnZones/EnemySpawnZone"]
+position = Vector3(5.5, 1, 5.5)
 
-[node name="AIController" type="Node" parent="Units/EnemyUnits" unique_id=1999439885 node_paths=PackedStringArray("unit", "turn_manager", "battle_controller")]
-script = ExtResource("7_q7tb2")
-unit = NodePath("../TacticalUnitEnemy")
-turn_manager = NodePath("../../../Systems/TurnManager")
-battle_controller = NodePath("../../../Systems/BattleController")
+[node name="Point2" type="Marker3D" parent="SpawnZones/EnemySpawnZone"]
+position = Vector3(7.5, 1, 5.5)
 
-[node name="AIController2" type="Node" parent="Units/EnemyUnits" unique_id=1999439886 node_paths=PackedStringArray("unit", "turn_manager", "battle_controller")]
-script = ExtResource("7_q7tb2")
-unit = NodePath("../TacticalUnitEnemy2")
-turn_manager = NodePath("../../../Systems/TurnManager")
-battle_controller = NodePath("../../../Systems/BattleController")
+[node name="Point3" type="Marker3D" parent="SpawnZones/EnemySpawnZone"]
+position = Vector3(5.5, 1, 7.5)
+
+[node name="Point4" type="Marker3D" parent="SpawnZones/EnemySpawnZone"]
+position = Vector3(7.5, 1, 7.5)
+
+[node name="Point5" type="Marker3D" parent="SpawnZones/EnemySpawnZone"]
+position = Vector3(3.5, 1, 7.5)
 
 [node name="Visualizers" type="Node3D" parent="." unique_id=1615445199]
 

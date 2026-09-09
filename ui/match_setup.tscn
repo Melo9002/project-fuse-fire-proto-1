@@ -1,0 +1,119 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/match_setup.gd" id="1_setup"]
+[ext_resource type="PackedScene" path="res://levels/prototype_map/prototype_map.tscn" id="2_battle"]
+
+[sub_resource type="StyleBoxFlat" id="Style_panel"]
+bg_color = Color(0.035, 0.05, 0.075, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.12, 0.65, 0.85, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="MatchSetup" type="Control" node_paths=PackedStringArray("player_count", "enemy_count", "start_button")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_setup")
+player_count = NodePath("CenterContainer/Panel/Margin/VBox/Teams/PlayerSide/PlayerCount")
+enemy_count = NodePath("CenterContainer/Panel/Margin/VBox/Teams/EnemySide/EnemyCount")
+start_button = NodePath("CenterContainer/Panel/Margin/VBox/StartButton")
+battle_scene = ExtResource("2_battle")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.008, 0.012, 0.02, 1)
+mouse_filter = 2
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="CenterContainer"]
+custom_minimum_size = Vector2(560, 330)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="Margin" type="MarginContainer" parent="CenterContainer/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 42
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 42
+theme_override_constants/margin_bottom = 32
+
+[node name="VBox" type="VBoxContainer" parent="CenterContainer/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Title" type="Label" parent="CenterContainer/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "FUSE FIRE — MATCH SETUP"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="CenterContainer/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Choose each force independently"
+horizontal_alignment = 1
+modulate = Color(0.7, 0.78, 0.86, 1)
+
+[node name="Teams" type="HBoxContainer" parent="CenterContainer/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 48
+alignment = 1
+
+[node name="PlayerSide" type="VBoxContainer" parent="CenterContainer/Panel/Margin/VBox/Teams"]
+layout_mode = 2
+
+[node name="PlayerLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/Teams/PlayerSide"]
+layout_mode = 2
+text = "PLAYER UNITS"
+horizontal_alignment = 1
+
+[node name="PlayerCount" type="SpinBox" parent="CenterContainer/Panel/Margin/VBox/Teams/PlayerSide"]
+custom_minimum_size = Vector2(150, 44)
+layout_mode = 2
+min_value = 1.0
+max_value = 5.0
+value = 2.0
+allow_greater = false
+allow_lesser = false
+
+[node name="EnemySide" type="VBoxContainer" parent="CenterContainer/Panel/Margin/VBox/Teams"]
+layout_mode = 2
+
+[node name="EnemyLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/Teams/EnemySide"]
+layout_mode = 2
+text = "ENEMY UNITS"
+horizontal_alignment = 1
+
+[node name="EnemyCount" type="SpinBox" parent="CenterContainer/Panel/Margin/VBox/Teams/EnemySide"]
+custom_minimum_size = Vector2(150, 44)
+layout_mode = 2
+min_value = 1.0
+max_value = 5.0
+value = 2.0
+allow_greater = false
+allow_lesser = false
+
+[node name="StartButton" type="Button" parent="CenterContainer/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "START 2 VS 2"

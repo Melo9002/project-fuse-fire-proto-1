@@ -8,6 +8,7 @@ The useful question when reading the code is: **which script owns this decision?
 levels/prototype_map/  Playable scene: map, units, camera, and references
 systems/              Battle interaction, turns, and combat rules
 systems/grid/         Terrain graph, map setup, occupancy, mouse rays
+systems/spawning/     Reusable spawn-zone data
 scripts/actions/      Move, Attack, and Defend operations
 scripts/components/   UnitStats: HP, AP, defense, player movement budget
 units/                Unit scene, movement animation, enemy decisions
@@ -35,6 +36,14 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 | `AIController` | Chooses a nearby player and attacks or approaches | Changing enemy decisions |
 | UI and visualizers | Display state and forward input | Changing feedback and presentation |
 | `TacticalCamera` | Bounded pan, zoom, and rotation | Changing how the battlefield is viewed |
+| `BattleLevel` | Builds selected teams before starting combat | Changing how a match is assembled |
+| `SpawnZone` | Supplies ordered spawn transforms and faction data | Changing where a generated team may spawn |
+
+## Match setup and spawning
+
+`MatchSetup` collects two independent counts and configures a new `BattleLevel`. The level asks each `SpawnZone` for the requested number of marker transforms, instantiates the shared tactical-unit scene, fills the turn rosters, and adds one AI controller per enemy. Only then does it tell `BattleController` to scan and start the match.
+
+Unit coordinates do not live in spawning code. They are scene data under the two spawn zones. A future handmade or generated map can supply different zones without changing `BattleLevel`, but procedural generation itself is outside this task.
 
 `Pathfinder`, `CombatRules`, `MapBuilder`, and actions are code objects rather than scene nodes. `RefCounted` lets Godot release them when no references remain. The battle owns one pathfinder; the scene no longer contains an unused second one.
 
