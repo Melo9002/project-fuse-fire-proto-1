@@ -41,14 +41,8 @@ static func evaluate_attack(attacker: TacticalUnit, target: TacticalUnit, grid: 
 static func can_attack(attacker: TacticalUnit, target: TacticalUnit, grid: GridManager, world: World3D) -> bool:
 	return evaluate_attack(attacker, target, grid, world).is_legal
 
-static func has_line_of_sight_to_position(attacker: TacticalUnit, destination: Vector3, grid: GridManager, world: World3D) -> bool:
-	if _map_data_blocks_line(attacker.global_position, destination, grid):
-		return false
-	var origin = attacker.global_position + Vector3.UP * 0.6
-	destination += Vector3.UP * 0.6
-	var query = PhysicsRayQueryParameters3D.create(origin, destination)
-	query.collision_mask = 1
-	return world.direct_space_state.intersect_ray(query).is_empty()
+static func has_line_of_sight_to_position(attacker: TacticalUnit, destination: Vector3, grid: GridManager, _world: World3D) -> bool:
+	return get_blocking_cell(attacker.global_position, destination, grid) == null
 
 static func get_directional_cover(attacker_cell: Vector3i, target_cell: Vector3i, grid: GridManager) -> MapCellData.CoverType:
 	var delta = attacker_cell - target_cell
@@ -65,17 +59,28 @@ static func get_directional_cover(attacker_cell: Vector3i, target_cell: Vector3i
 			strongest = data.cover_type
 	return strongest
 
-static func _map_data_blocks_line(origin: Vector3, destination: Vector3, grid: GridManager) -> bool:
-	var distance = origin.distance_to(destination)
-	var sample_count = ceili(distance / (grid.cell_size * 0.25))
-	var origin_cell = grid.world_to_grid(origin)
-	var destination_cell = grid.world_to_grid(destination)
-	for index in range(1, sample_count):
-		var sample = origin.lerp(destination, float(index) / sample_count)
-		var sample_cell = grid.world_to_grid(sample)
-		if sample_cell == origin_cell or sample_cell == destination_cell:
-			continue
-		var data = grid.get_cell_data(sample_cell)
+static func get_blocking_cell(origin: Vector3, destination: Vector3, grid: GridManager) -> MapCellData:
+	var cell = grid.world_to_grid(origin)
+	var target = grid.world_to_grid(destination)
+	var dx = absi(target.x - cell.x)
+	var dz = absi(target.z - cell.z)
+	var step_x = signi(target.x - cell.x)
+	var step_z = signi(target.z - cell.z)
+	var crossed_x := 0
+	var crossed_z := 0
+	# Compare boundary crossings exactly; touching a corner alone does not block.
+	while cell != target:
+		var next_x = (2 * crossed_x + 1) * dz
+		var next_z = (2 * crossed_z + 1) * dx
+		if next_x <= next_z:
+			cell.x += step_x
+			crossed_x += 1
+		if next_z <= next_x:
+			cell.z += step_z
+			crossed_z += 1
+		if cell == target:
+			break
+		var data = grid.get_cell_data(cell)
 		if data and data.blocks_line_of_sight:
-			return true
-	return false
+			return data
+	return null

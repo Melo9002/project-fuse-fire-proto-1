@@ -22,6 +22,39 @@ func _run() -> void:
 	var grid = battle.grid_manager
 	var attacker = battle.turn_manager.player_units[0]
 	var target = battle.turn_manager.enemy_units[0]
+	check(attacker.attack_range == 8, "Friendly units use the extended test range")
+	check(target.attack_range == 3, "Enemy attack range remains unchanged")
+	var mismatches := 0
+	var small_block = grid.get_cell_data(Vector3i(12, 0, 12))
+	place(attacker, Vector3i(11, 0, 12), grid)
+	place(target, Vector3i(13, 0, 12), grid)
+	check(battle.evaluate_attack(attacker, target).hit_chance == 50, "Small authored block permits a 50 percent shot")
+	check(level.get_node("Environment/Obstacles/WallObstacle").size.y == small_block.cover_height, "Small block height matches metadata")
+	# Include full cover in the exhaustive LOS comparison.
+	small_block.blocks_line_of_sight = true
+	for source in grid.map_data.cells:
+		if not grid.get_cell_data(source).walkable:
+			continue
+		place(attacker, source, grid)
+		for destination in grid.map_data.cells:
+			if not grid.get_cell_data(destination).walkable or source == destination:
+				continue
+			place(target, destination, grid)
+			var floor_visible = CombatRules.has_line_of_sight_to_position(attacker, grid.grid_to_world(destination), grid, battle.get_world_3d())
+			var unit_visible = CombatRules.has_line_of_sight_to_position(attacker, target.global_position, grid, battle.get_world_3d())
+			if floor_visible != unit_visible:
+				if mismatches == 0:
+					print("First LOS mismatch: ", source, " -> ", destination, " floor=", floor_visible, " unit=", unit_visible)
+				mismatches += 1
+	check(mismatches == 0, "Floor and unit LOS must agree for every walkable cell pair: %d mismatches" % mismatches)
+	var corner_blocker = grid.get_cell_data(Vector3i(2, 0, 2))
+	corner_blocker.blocks_line_of_sight = true
+	place(attacker, Vector3i(1, 0, 2), grid)
+	place(target, Vector3i(2, 0, 1), grid)
+	check(battle.evaluate_attack(attacker, target).is_legal, "Touching a full-cover corner alone permits a shot")
+	place(target, Vector3i(3, 0, 2), grid)
+	check(not battle.evaluate_attack(attacker, target).is_legal, "Crossing the interior of full cover blocks a shot")
+	corner_blocker.blocks_line_of_sight = false
 
 	# The z=12 low barrier protects only the side facing the attacker.
 	place(attacker, Vector3i(5, 0, 10), grid)
@@ -30,6 +63,11 @@ func _run() -> void:
 	check(low_cover.is_legal, "Low cover keeps the attack legal")
 	check(low_cover.hit_chance == 50, "Directional low cover gives 50 percent hit chance")
 	check(low_cover.cover_type == MapCellData.CoverType.LOW, "Evaluation reports low cover")
+	var low_cover_cell = Vector3i(5, 0, 12)
+	check(not battle.pathfinder.astar.is_point_disabled(battle.pathfinder.grid_to_id_map[low_cover_cell]), "Low cover remains connected for vault paths")
+	check(not grid.get_cell_data(low_cover_cell).can_stop, "Units cannot end movement on low cover")
+	check(CombatRules.has_line_of_sight_to_position(attacker, target.global_position, grid, battle.get_world_3d()), "Unwalkable low cover does not block a shot")
+	check(CombatRules.has_line_of_sight_to_position(attacker, grid.grid_to_world(Vector3i(5, 0, 13)), grid, battle.get_world_3d()), "Attack preview and target checks share line of sight")
 
 	place(attacker, Vector3i(5, 0, 14), grid)
 	var wrong_side = battle.evaluate_attack(attacker, target)
@@ -47,6 +85,7 @@ func _run() -> void:
 	check(wall_edge.is_legal and wall_edge.hit_chance == 100, "A shot past the wall edge remains legal")
 
 	attacker.stats.current_ap = attacker.stats.max_ap
+	small_block.blocks_line_of_sight = false
 	target.stats.current_hp = target.stats.max_hp
 	var forced_miss = AttackAction.new(attacker, target, 1, 50, 75.0)
 	check(forced_miss.execute() and not forced_miss.did_hit, "A failed hit roll performs a miss")
@@ -59,4 +98,3 @@ func _run() -> void:
 	await process_frame
 	print("Combat cover smoke: %d failure(s)" % failures)
 	quit(1 if failures else 0)
-

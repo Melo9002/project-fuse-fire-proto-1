@@ -24,9 +24,10 @@ func _run() -> void:
 	var open_data = grid.get_cell_data(open_cell)
 
 	check(grid.map_data.cells.size() == 400, "Map data contains every 20 x 20 cell")
-	check(wall_data != null and not wall_data.walkable, "Obstacle cell is not walkable")
-	check(wall_data != null and wall_data.cover_type == MapCellData.CoverType.FULL, "Two-meter obstacle exposes full cover")
-	check(wall_data != null and wall_data.blocks_line_of_sight, "Full cover blocks line of sight")
+	check(wall_data != null and wall_data.walkable and not wall_data.can_stop, "Low cover can be crossed but not occupied")
+	check(wall_data != null and wall_data.cover_type == MapCellData.CoverType.LOW, "Small block exposes low cover")
+	check(wall_data != null and not wall_data.blocks_line_of_sight, "Small block permits shots")
+	check(wall_data != null and wall_data.movement_cost == 2, "Vaulting costs two movement points")
 	check(low_cover_data != null and low_cover_data.cover_type == MapCellData.CoverType.LOW, "One-meter obstacle exposes low cover")
 	check(low_cover_data != null and is_equal_approx(low_cover_data.cover_height, 1.0), "Cover height remains separate from cover type")
 	check(low_cover_data != null and not low_cover_data.blocks_line_of_sight, "Low cover does not block line of sight")

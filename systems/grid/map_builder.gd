@@ -37,7 +37,16 @@ static func scan_obstacles(world: World3D, grid: GridManager, pathfinder: Pathfi
 				cell_data.cover_type = feature.cover_type
 				cell_data.cover_height = feature.cover_height
 				cell_data.blocks_line_of_sight = feature.blocks_line_of_sight
-				cell_data.movement_cost = feature.movement_cost
-			if cell_data:
+				if feature.cover_type == MapCellData.CoverType.LOW:
+					cell_data.walkable = true
+					cell_data.can_stop = false
+					cell_data.movement_cost = feature.movement_cost
+					pathfinder.configure_cell(grid_pos, true, false, feature.movement_cost)
+				else:
+					cell_data.walkable = false
+					cell_data.can_stop = false
+					pathfinder.disable_cell(grid_pos)
+			elif cell_data:
 				cell_data.walkable = false
-			pathfinder.disable_cell(grid_pos)
+				cell_data.can_stop = false
+				pathfinder.disable_cell(grid_pos)

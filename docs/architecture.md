@@ -64,6 +64,10 @@ Exhausted and dead portraits remain visible but cannot be selected. A dead portr
 
 `MapData` is the runtime terrain description. Every `MapCellData` record stores its coordinate, world position, elevation, walkability, cover type, physical cover height, LOS blocking flag, and movement cost. Authored maps fill it through `MapBuilder`; a procedural generator can later produce the same records without changing gameplay systems. `GridManager.occupancy_map` remains separate because a unit standing on a tile does not change its terrain.
 
+Movement distinguishes crossing a cell from ending on it. Floor cells cost one movement point and accept units. Low cover stays connected, costs two points, and cannot be a destination; the movement path raises the unit by the declared cover height while crossing it. Full cover is disconnected. Every completed Move action still costs one AP.
+
+`CoverVisualizer` draws a short edge inside each reachable destination beside cover while Move mode is active. The edge faces the obstacle, matching directional combat cover. Low and full cover use separate materials, and leaving Move mode clears both.
+
 ## Follow one move
 
 1. The Move button calls `BattleController.toggle_move_mode()`.
@@ -78,6 +82,12 @@ A **signal** is an announcement: `ap_changed` lets UI update without stats knowi
 ## Follow an attack and a round
 
 Attack mode makes an enemy click call `BattleController.try_attack()`. `CombatRules.evaluate_attack()` returns legality, hit chance, directional cover, and a reason. Clear shots have 100% accuracy, low cover on the target-facing edge gives 50%, and full cover intersecting the line makes the attack illegal. `AttackAction` spends AP and resolves the roll; hits deal full damage and misses deal none. AI attacks use the same controller entry point.
+
+Line of sight reads the terrain description rather than using pathfinding or raw obstacle collisions. Unwalkable low cover can reduce accuracy without blocking a shot; cells marked as LOS-blocking full cover make it illegal. This keeps authored and future generated maps on the same rules.
+
+Flat-map LOS traverses cells exactly between tile centers. Floor previews and unit targets use identical coordinates regardless of model height. A line touching only a cell corner does not enter that cell; crossing its interior does.
+
+All three current authored obstacles are 1 m low cover, including the small central cube. Full-cover behavior is exercised with test terrain. Enable `Debug Shots` on `BattleController` to log attempted targets, legality, chance, and the blocking terrain cell when present.
 
 At zero HP, stats announce defeat. The unit relays the signal, and the battle removes it from occupancy and the roster before freeing it.
 

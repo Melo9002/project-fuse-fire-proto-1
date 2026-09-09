@@ -12,8 +12,10 @@ signal units_registered(player_units: Array[TacticalUnit])
 @export var mouse_raycaster: MouseRaycaster
 @export var grid_cursor: GridCursor
 @export var path_visualizer: PathVisualizer
+@export var cover_visualizer: CoverVisualizer
 @export var grid_manager: GridManager
 @export var turn_manager: TurnManager
+@export var debug_shots: bool = false
 
 const UNIFORM_AP_COST = 1
 
@@ -34,6 +36,7 @@ var is_move_mode_active: bool = false:
 			if not is_move_mode_active:
 				path_visualizer.clear_path()
 				path_visualizer.clear_range_zone()
+				cover_visualizer.clear()
 
 var is_attack_mode_active: bool = false:
 	set(value):
@@ -44,7 +47,7 @@ var is_attack_mode_active: bool = false:
 				path_visualizer.clear_range_zone()
 
 func _ready() -> void:
-	if not mouse_raycaster or not grid_manager or not grid_manager.map_floor or not path_visualizer or not turn_manager or not grid_cursor:
+	if not mouse_raycaster or not grid_manager or not grid_manager.map_floor or not path_visualizer or not cover_visualizer or not turn_manager or not grid_cursor:
 		push_error("Missing critical node assignments on BattleController!")
 		return
 
@@ -178,6 +181,7 @@ func update_unit_movement_zone() -> void:
 	)
 
 	path_visualizer.draw_range_zone(current_movement_zone, Color(0.9, 0.8, 0.1, 0.25))
+	cover_visualizer.draw_for_cells(current_movement_zone)
 
 func update_attack_range() -> void:
 	current_attack_zone.clear()
@@ -219,6 +223,11 @@ func try_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:
 	if is_action_in_progress or turn_manager.battle_result != TurnManager.BattleResult.ONGOING:
 		return false
 	var evaluation = evaluate_attack(attacker, target)
+	if debug_shots:
+		var blocker = CombatRules.get_blocking_cell(attacker.global_position, target.global_position, grid_manager)
+		print("[Shot] ", attacker.name, " ", world_to_grid(attacker.global_position), " -> ", target.name, " ", world_to_grid(target.global_position), " legal=", evaluation.is_legal, " chance=", evaluation.hit_chance, " reason=", evaluation.reason)
+		if blocker:
+			print("[Shot] blocker=", blocker.grid_position, " cover=", blocker.cover_type, " height=", blocker.cover_height, " walkable=", blocker.walkable)
 	if not evaluation.is_legal:
 		return false
 
@@ -244,7 +253,7 @@ func try_defend(unit: TacticalUnit) -> bool:
 func try_move(unit: TacticalUnit, target_cell: Vector3i, path: PackedVector3Array) -> bool:
 	if is_action_in_progress or turn_manager.battle_result != TurnManager.BattleResult.ONGOING:
 		return false
-	var action = MoveAction.new(unit, target_cell, path, grid_manager, UNIFORM_AP_COST)
+	var action = MoveAction.new(unit, target_cell, _build_movement_path(unit, path), grid_manager, UNIFORM_AP_COST)
 	if not action.execute():
 		return false
 	is_action_in_progress = true
@@ -253,6 +262,16 @@ func try_move(unit: TacticalUnit, target_cell: Vector3i, path: PackedVector3Arra
 	await unit.movement_finished
 	is_action_in_progress = false
 	return true
+
+func _build_movement_path(unit: TacticalUnit, path: PackedVector3Array) -> PackedVector3Array:
+	var animated_path := PackedVector3Array()
+	for point in path:
+		var cell = grid_manager.get_cell_data(world_to_grid(point))
+		var standing_height = unit.standing_height
+		if cell and cell.cover_type == MapCellData.CoverType.LOW:
+			standing_height += cell.cover_height
+		animated_path.append(point + Vector3.UP * standing_height)
+	return animated_path
 
 func _on_unit_defeated(unit: TacticalUnit) -> void:
 	if not is_instance_valid(unit):

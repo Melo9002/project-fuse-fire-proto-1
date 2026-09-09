@@ -23,10 +23,11 @@ func _run() -> void:
 	check(turns.current_phase == TurnManager.TurnPhase.PLAYER_TURN, "Battle starts after map scan")
 	check(battle.pathfinder.grid_to_id_map.size() == 400, "20 x 20 terrain is built")
 	var wall = grid.world_to_grid(Vector3(2.5, 0, 2.5))
-	check(battle.pathfinder.astar.is_point_disabled(battle.pathfinder.grid_to_id_map[wall]), "Wall blocks terrain")
+	check(not battle.pathfinder.astar.is_point_disabled(battle.pathfinder.grid_to_id_map[wall]), "Low cover remains connected for vault paths")
+	check(not grid.get_cell_data(wall).can_stop, "Units cannot stop on low cover")
 	var start = grid.world_to_grid(player.global_position)
 	check(not battle.pathfinder.astar.is_point_disabled(battle.pathfinder.grid_to_id_map[start]), "Units do not disable terrain")
-	check(battle.pathfinder.calculate_3d_path(wall, start).is_empty(), "Paths cannot escape a blocked terrain cell")
+	check(battle.pathfinder.calculate_3d_path(start, wall).is_empty(), "Low cover cannot be a movement destination")
 	check(not battle.can_attack(player, turns.player_units[1]), "Friendly fire is rejected")
 	check(not battle.can_attack(player, enemy), "Out-of-range attacks are rejected")
 	check(FactionRules.are_hostile(TacticalUnit.Faction.ALLY, TacticalUnit.Faction.ENEMY), "Allies and enemies are hostile")
@@ -61,19 +62,18 @@ func _run() -> void:
 	check(not battle.try_attack(player, enemy), "Attack without AP is rejected")
 	check(turns.current_phase == TurnManager.TurnPhase.PLAYER_TURN, "Zero AP does not automatically end the phase")
 
-	# A tall wall must block the actual shot ray, not merely the walking graph.
-	var blocker = StaticBody3D.new()
-	var shape = CollisionShape3D.new()
-	var box = BoxShape3D.new()
-	box.size = Vector3(0.2, 4, 1)
-	shape.shape = box
-	blocker.add_child(shape)
-	level.add_child(blocker)
-	blocker.global_position = (player.global_position + enemy.global_position) / 2
-	await create_timer(0.1).timeout
-	check(not battle.can_attack(player, enemy), "Environment wall blocks shots")
-	blocker.queue_free()
-	await process_frame
+	# LOS reads full-cover terrain independently from movement connectivity.
+	var player_cell = grid.world_to_grid(player.global_position)
+	var blocker_cell = player_cell + Vector3i(1, 0, 0)
+	var target_cell = player_cell + Vector3i(2, 0, 0)
+	enemy.global_position = grid.grid_to_world(target_cell) + Vector3.UP
+	grid.update_unit_position(enemy, blocker_cell, target_cell)
+	var blocker_data = grid.get_cell_data(blocker_cell)
+	blocker_data.cover_type = MapCellData.CoverType.FULL
+	blocker_data.blocks_line_of_sight = true
+	check(not battle.can_attack(player, enemy), "Full-cover map data blocks shots")
+	blocker_data.cover_type = MapCellData.CoverType.NONE
+	blocker_data.blocks_line_of_sight = false
 
 	turns.end_current_turn()
 	await create_timer(6.0).timeout

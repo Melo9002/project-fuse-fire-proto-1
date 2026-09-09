@@ -7,6 +7,7 @@ signal movement_finished
 signal defeated(unit: TacticalUnit)
 
 @export var movement_speed: float = 5.0
+@export var standing_height: float = 1.0
 @export var attack_range: int = 3
 @export var faction: Faction = Faction.PLAYER
 @export var stats: UnitStats
@@ -34,8 +35,6 @@ func _process(delta: float) -> void:
 		return
 
 	var target_waypoint = current_path[current_waypoint_idx]
-	# Paths lie on the floor; keep the unit's standing height during animation.
-	target_waypoint.y = global_position.y
 
 	global_position = global_position.move_toward(target_waypoint, movement_speed * delta)
 

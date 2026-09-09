@@ -8,6 +8,7 @@ extends Node3D
 @export var enemy_units_parent: Node3D
 @export var turn_manager: TurnManager
 @export var battle_controller: BattleController
+@export_range(1, 20, 1) var player_attack_range: int = 8
 
 var player_unit_count: int = 2
 var enemy_unit_count: int = 2
@@ -46,4 +47,5 @@ func _spawn_team(count: int, zone: SpawnZone, parent: Node3D, add_ai: bool) -> v
 			ai.battle_controller = battle_controller
 			parent.add_child(ai)
 		else:
+			unit.attack_range = player_attack_range
 			turn_manager.player_units.append(unit)

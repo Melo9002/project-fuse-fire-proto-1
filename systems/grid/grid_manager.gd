@@ -36,7 +36,8 @@ func get_cell_data(grid_pos: Vector3i) -> MapCellData:
 	return map_data.get_cell(grid_pos)
 
 func can_unit_occupy_cell(_moving_unit: TacticalUnit, grid_pos: Vector3i) -> bool:
-	return not is_cell_occupied(grid_pos)
+	var cell = get_cell_data(grid_pos)
+	return cell != null and cell.walkable and cell.can_stop and not is_cell_occupied(grid_pos)
 
 func grid_to_world(grid_pos: Vector3i) -> Vector3:
 	if not map_floor:

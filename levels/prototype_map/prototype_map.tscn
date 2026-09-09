@@ -18,6 +18,7 @@
 [ext_resource type="PackedScene" path="res://ui/unit_portrait.tscn" id="19_portrait"]
 [ext_resource type="Script" path="res://visualizers/unit_selection_visualizer.gd" id="20_selection"]
 [ext_resource type="Script" path="res://systems/grid/terrain_feature.gd" id="21_terrain"]
+[ext_resource type="Script" path="res://visualizers/cover_visualizer.gd" id="22_cover"]
 
 [sub_resource type="Environment" id="Environment_8x357"]
 
@@ -60,12 +61,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.72652817, -1.000001, -0.05
 script = ExtResource("1_822c8")
 camera = NodePath("../../CameraRig/Camera3D")
 
-[node name="BattleController" type="Node3D" parent="Systems" unique_id=1810984402 node_paths=PackedStringArray("mouse_raycaster", "grid_cursor", "path_visualizer", "grid_manager", "turn_manager")]
+[node name="BattleController" type="Node3D" parent="Systems" unique_id=1810984402 node_paths=PackedStringArray("mouse_raycaster", "grid_cursor", "path_visualizer", "cover_visualizer", "grid_manager", "turn_manager")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.72652817, -1.000001, -0.05766487)
 script = ExtResource("3_fg2v6")
 mouse_raycaster = NodePath("../MouseRaycaster")
 grid_cursor = NodePath("../../Visualizers/GridCursor")
 path_visualizer = NodePath("../../Visualizers/PathVisualizer")
+cover_visualizer = NodePath("../../Visualizers/CoverVisualizer")
 grid_manager = NodePath("../GridManager")
 turn_manager = NodePath("../TurnManager")
 
@@ -100,9 +102,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0.5, 2.5)
 use_collision = true
 material = SubResource("StandardMaterial3D_ebqvm")
 script = ExtResource("21_terrain")
-cover_type = 2
-cover_height = 2.0
-blocks_line_of_sight = true
+size = Vector3(1, 1, 1)
+cover_type = 1
+cover_height = 1.0
+blocks_line_of_sight = false
+movement_cost = 2
 
 [node name="WallObstacle2" type="CSGBox3D" parent="Environment/Obstacles" unique_id=928162335]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -5, 0.5, -5)
@@ -112,6 +116,7 @@ material = SubResource("StandardMaterial3D_ebqvm")
 script = ExtResource("21_terrain")
 cover_type = 1
 cover_height = 1.0
+movement_cost = 2
 
 [node name="WallObstacle3" type="CSGBox3D" parent="Environment/Obstacles" unique_id=1605087906]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.5, 2.5)
@@ -121,6 +126,7 @@ material = SubResource("StandardMaterial3D_ebqvm")
 script = ExtResource("21_terrain")
 cover_type = 1
 cover_height = 1.0
+movement_cost = 2
 
 [node name="Units" type="Node3D" parent="." unique_id=1833029652]
 
@@ -185,6 +191,10 @@ highlight_color = Color(0.9999594, 0.122358926, 0.10734794, 0.8)
 
 [node name="PathVisualizer" type="Node3D" parent="Visualizers" unique_id=916084487 node_paths=PackedStringArray("grid_manager")]
 script = ExtResource("6_8rqs0")
+grid_manager = NodePath("../../Systems/GridManager")
+
+[node name="CoverVisualizer" type="Node3D" parent="Visualizers" node_paths=PackedStringArray("grid_manager")]
+script = ExtResource("22_cover")
 grid_manager = NodePath("../../Systems/GridManager")
 
 [node name="UnitSelectionVisualizer" type="Node" parent="Visualizers" node_paths=PackedStringArray("turn_manager")]
