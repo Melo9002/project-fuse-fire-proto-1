@@ -3,6 +3,8 @@ class_name BattleController
 
 signal move_mode_toggled(is_active: bool)
 signal attack_mode_toggled(is_active: bool)
+signal attack_preview_changed(text: String)
+signal attack_resolved(attacker: TacticalUnit, target: TacticalUnit, did_hit: bool, hit_chance: int)
 signal action_state_changed(is_busy: bool)
 signal units_registered(player_units: Array[TacticalUnit])
 
@@ -18,6 +20,7 @@ const UNIFORM_AP_COST = 1
 var pathfinder := Pathfinder.new()
 var current_movement_zone: Array[Vector3i] = []
 var current_attack_zone: Array[Vector3i] = []
+var _last_attack_preview := ""
 var is_action_in_progress: bool = false:
 	set(value):
 		if is_action_in_progress != value:
@@ -95,8 +98,12 @@ func _process(_delta: float) -> void:
 		grid_cursor.update_hover_position(floor_hit.position)
 	if not is_move_mode_active or not is_instance_valid(tactical_unit) or tactical_unit.is_moving:
 		path_visualizer.clear_path()
-		return
+	else:
+		_update_movement_preview(floor_hit)
 
+	_update_attack_preview()
+
+func _update_movement_preview(floor_hit: Dictionary) -> void:
 	if not floor_hit.is_empty():
 		var hover_grid = world_to_grid(floor_hit.position)
 		if current_movement_zone.has(hover_grid):
@@ -104,8 +111,18 @@ func _process(_delta: float) -> void:
 			if path.size() > 1:
 				path_visualizer.draw_path(path, Color(0.0, 0.5, 1.0, 0.4))
 				return
-
 	path_visualizer.clear_path()
+
+func _update_attack_preview() -> void:
+	var preview = ""
+	if is_attack_mode_active and is_instance_valid(tactical_unit):
+		var hovered = mouse_raycaster.get_unit_under_mouse()
+		if is_instance_valid(hovered) and hovered != tactical_unit:
+			var evaluation = evaluate_attack(tactical_unit, hovered)
+			preview = "%d%% HIT" % evaluation.hit_chance if evaluation.is_legal else evaluation.reason.to_upper()
+	if preview != _last_attack_preview:
+		_last_attack_preview = preview
+		attack_preview_changed.emit(preview)
 
 func _on_unit_clicked(unit: TacticalUnit) -> void:
 	if is_action_in_progress or not is_instance_valid(unit) or not unit.stats or unit.stats.is_defeated:
@@ -179,7 +196,7 @@ func update_attack_range() -> void:
 			continue
 
 		var world_pos = grid_manager.grid_to_world(grid_pos)
-		if CombatRules.has_line_of_sight_to_position(tactical_unit, world_pos, get_world_3d()):
+		if CombatRules.has_line_of_sight_to_position(tactical_unit, world_pos, grid_manager, get_world_3d()):
 			current_attack_zone.append(grid_pos)
 
 	path_visualizer.draw_range_zone(current_attack_zone, Color(0.95, 0.2, 0.2, 0.3))
@@ -193,17 +210,22 @@ func world_to_grid(pos: Vector3) -> Vector3i:
 	return grid_manager.world_to_grid(pos)
 
 func can_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:
-	return CombatRules.can_attack(attacker, target, grid_manager, get_world_3d())
+	return evaluate_attack(attacker, target).is_legal
+
+func evaluate_attack(attacker: TacticalUnit, target: TacticalUnit) -> CombatRules.AttackEvaluation:
+	return CombatRules.evaluate_attack(attacker, target, grid_manager, get_world_3d())
 
 func try_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:
 	if is_action_in_progress or turn_manager.battle_result != TurnManager.BattleResult.ONGOING:
 		return false
-	if not can_attack(attacker, target):
+	var evaluation = evaluate_attack(attacker, target)
+	if not evaluation.is_legal:
 		return false
 
-	var attack_cmd = AttackAction.new(attacker, target, UNIFORM_AP_COST)
+	var attack_cmd = AttackAction.new(attacker, target, UNIFORM_AP_COST, evaluation.hit_chance)
 	if not attack_cmd.execute():
 		return false
+	attack_resolved.emit(attacker, target, attack_cmd.did_hit, evaluation.hit_chance)
 
 	is_attack_mode_active = false
 	is_move_mode_active = false

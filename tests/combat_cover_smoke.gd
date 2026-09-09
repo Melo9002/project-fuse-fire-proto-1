@@ -1,0 +1,62 @@
+extends SceneTree
+
+var failures := 0
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+func check(condition: bool, message: String) -> void:
+	if not condition:
+		failures += 1
+		push_error(message)
+
+func place(unit: TacticalUnit, cell: Vector3i, grid: GridManager) -> void:
+	unit.global_position = grid.grid_to_world(cell) + Vector3.UP
+
+func _run() -> void:
+	var level = load("res://levels/prototype_map/prototype_map.tscn").instantiate()
+	root.add_child(level)
+	await create_timer(0.15).timeout
+
+	var battle: BattleController = level.get_node("Systems/BattleController")
+	var grid = battle.grid_manager
+	var attacker = battle.turn_manager.player_units[0]
+	var target = battle.turn_manager.enemy_units[0]
+
+	# The z=12 low barrier protects only the side facing the attacker.
+	place(attacker, Vector3i(5, 0, 10), grid)
+	place(target, Vector3i(5, 0, 13), grid)
+	var low_cover = battle.evaluate_attack(attacker, target)
+	check(low_cover.is_legal, "Low cover keeps the attack legal")
+	check(low_cover.hit_chance == 50, "Directional low cover gives 50 percent hit chance")
+	check(low_cover.cover_type == MapCellData.CoverType.LOW, "Evaluation reports low cover")
+
+	place(attacker, Vector3i(5, 0, 14), grid)
+	var wrong_side = battle.evaluate_attack(attacker, target)
+	check(wrong_side.is_legal and wrong_side.hit_chance == 100, "Cover does not protect the wrong side")
+
+	attacker.attack_range = 6
+	place(attacker, Vector3i(10, 0, 12), grid)
+	place(target, Vector3i(14, 0, 12), grid)
+	var full_cover = battle.evaluate_attack(attacker, target)
+	check(not full_cover.is_legal and full_cover.reason == "Blocked", "Full cover makes the shot illegal")
+
+	place(attacker, Vector3i(10, 0, 14), grid)
+	place(target, Vector3i(14, 0, 14), grid)
+	var wall_edge = battle.evaluate_attack(attacker, target)
+	check(wall_edge.is_legal and wall_edge.hit_chance == 100, "A shot past the wall edge remains legal")
+
+	attacker.stats.current_ap = attacker.stats.max_ap
+	target.stats.current_hp = target.stats.max_hp
+	var forced_miss = AttackAction.new(attacker, target, 1, 50, 75.0)
+	check(forced_miss.execute() and not forced_miss.did_hit, "A failed hit roll performs a miss")
+	check(target.stats.current_hp == target.stats.max_hp and attacker.stats.current_ap == 1, "A miss deals no damage and spends AP")
+	var forced_hit = AttackAction.new(attacker, target, 1, 50, 25.0)
+	check(forced_hit.execute() and forced_hit.did_hit, "A successful hit roll performs a hit")
+	check(target.stats.current_hp == target.stats.max_hp - 25 and attacker.stats.current_ap == 0, "A hit deals full damage and spends AP")
+
+	level.queue_free()
+	await process_frame
+	print("Combat cover smoke: %d failure(s)" % failures)
+	quit(1 if failures else 0)
+

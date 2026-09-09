@@ -22,6 +22,7 @@ func _ready() -> void:
 		defend_button.pressed.connect(_on_defend_pressed)
 	battle_controller.move_mode_toggled.connect(_on_move_mode_toggled)
 	battle_controller.attack_mode_toggled.connect(_on_attack_mode_toggled)
+	battle_controller.attack_preview_changed.connect(_on_attack_preview_changed)
 	battle_controller.action_state_changed.connect(_on_action_state_changed)
 
 	var turn_mgr = battle_controller.turn_manager
@@ -69,6 +70,10 @@ func _on_move_mode_toggled(is_active: bool) -> void:
 func _on_attack_mode_toggled(is_active: bool) -> void:
 	if attack_button:
 		attack_button.text = "Cancel Attack" if is_active else "Attack (1 AP)"
+
+func _on_attack_preview_changed(text: String) -> void:
+	if attack_button and battle_controller.is_attack_mode_active:
+		attack_button.text = text if not text.is_empty() else "Cancel Attack"
 
 func _on_turn_phase_changed(new_phase: TurnManager.TurnPhase) -> void:
 	visible = (new_phase == TurnManager.TurnPhase.PLAYER_TURN)

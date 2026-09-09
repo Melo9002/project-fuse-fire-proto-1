@@ -77,7 +77,7 @@ A **signal** is an announcement: `ap_changed` lets UI update without stats knowi
 
 ## Follow an attack and a round
 
-Attack mode makes an enemy click call `BattleController.try_attack()`. It asks `CombatRules` whether the target is legal, then `AttackAction` checks AP and applies damage through `UnitStats`. AI attacks use the same entry point. `AttackAction` alone does not check range or walls; gameplay callers should use `try_attack()`.
+Attack mode makes an enemy click call `BattleController.try_attack()`. `CombatRules.evaluate_attack()` returns legality, hit chance, directional cover, and a reason. Clear shots have 100% accuracy, low cover on the target-facing edge gives 50%, and full cover intersecting the line makes the attack illegal. `AttackAction` spends AP and resolves the roll; hits deal full damage and misses deal none. AI attacks use the same controller entry point.
 
 At zero HP, stats announce defeat. The unit relays the signal, and the battle removes it from occupancy and the roster before freeing it.
 
@@ -112,7 +112,7 @@ Physics collision layers are separate from visual render layers. Map setup waits
 ## Known limits to playtest next
 
 - Paths consider terrain, not intervening units. Friendly/enemy blocking needs a gameplay decision.
-- Attack previews cast toward floor height; real attacks cast toward unit height. Around low cover, the red overlay can disagree with a shot.
+- Attack-range coloring shows legal cells, while the attack button shows the exact hovered unit chance or blocked reason.
 - The global action lock prevents selection, new actions, and phase changes during movement. Attacks and defense are currently immediate, so they do not hold the lock across an animation.
 - The grid assumes a flat, unrotated floor centered on world X/Z. Moving or rotating it is not supported by all conversions and visuals.
 - Terrain is scanned only at startup; moving walls later will not rebuild paths.

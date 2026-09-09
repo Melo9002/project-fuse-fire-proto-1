@@ -100,8 +100,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0.5, 2.5)
 use_collision = true
 material = SubResource("StandardMaterial3D_ebqvm")
 script = ExtResource("21_terrain")
-cover_type = 1
-cover_height = 1.0
+cover_type = 2
+cover_height = 2.0
+blocks_line_of_sight = true
 
 [node name="WallObstacle2" type="CSGBox3D" parent="Environment/Obstacles" unique_id=928162335]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -5, 0.5, -5)
