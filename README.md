@@ -8,6 +8,8 @@ Import `project.godot` in Godot and press **F5**.
 
 The match setup screen accepts 1–5 player units and 1–5 enemy units. The battlefield spawns them from reusable marker-based spawn zones; team sizes do not need to match.
 
+During battle, the bottom portrait bar mirrors the friendly roster. Each Bean card shows HP, AP, and its selected, ready, exhausted, or dead state. Clicking a ready portrait selects the same unit in the battlefield.
+
 | Control | Effect |
 | --- | --- |
 | Click a player unit | Select it if it has AP remaining |
@@ -37,6 +39,7 @@ With the Godot console executable on your PATH:
 godot_console --headless --path . --editor --quit
 godot_console --headless --path . --script res://tests/battle_smoke.gd
 godot_console --headless --path . --script res://tests/match_setup_smoke.gd
+godot_console --headless --path . --script res://tests/portrait_bar_smoke.gd
 ```
 
 The smoke test loads the real battle scene and checks terrain, movement, AP, attacks, walls, defense, enemy turns, and defeat cleanup. Play the scene to check appearance and combat feel.

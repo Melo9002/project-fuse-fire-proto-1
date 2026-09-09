@@ -14,6 +14,8 @@
 [ext_resource type="Script" path="res://systems/camera/tactical_camera.gd" id="15_camera"]
 [ext_resource type="Script" path="res://levels/prototype_map/battle_level.gd" id="16_level"]
 [ext_resource type="Script" path="res://systems/spawning/spawn_zone.gd" id="17_zone"]
+[ext_resource type="Script" path="res://ui/unit_portrait_bar.gd" id="18_portrait_bar"]
+[ext_resource type="PackedScene" path="res://ui/unit_portrait.tscn" id="19_portrait"]
 
 [sub_resource type="Environment" id="Environment_8x357"]
 
@@ -240,3 +242,42 @@ text = "Attack"
 [node name="DefendButton" type="Button" parent="Visualizers/BattleUI/ActionHUDController/ActionBar" unique_id=1002343883]
 layout_mode = 2
 text = "Defend"
+
+[node name="UnitPortraitBar" type="Control" parent="Visualizers/BattleUI" node_paths=PackedStringArray("turn_manager", "battle_controller", "portraits_container")]
+layout_mode = 3
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -330.0
+offset_top = -150.0
+offset_right = 330.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("18_portrait_bar")
+turn_manager = NodePath("../../../Systems/TurnManager")
+battle_controller = NodePath("../../../Systems/BattleController")
+portraits_container = NodePath("Panel/Margin/Portraits")
+portrait_scene = ExtResource("19_portrait")
+
+[node name="Panel" type="PanelContainer" parent="Visualizers/BattleUI/UnitPortraitBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Visualizers/BattleUI/UnitPortraitBar/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 4
+
+[node name="Portraits" type="HBoxContainer" parent="Visualizers/BattleUI/UnitPortraitBar/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1

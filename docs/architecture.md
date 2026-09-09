@@ -38,12 +38,20 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 | `TacticalCamera` | Bounded pan, zoom, and rotation | Changing how the battlefield is viewed |
 | `BattleLevel` | Builds selected teams before starting combat | Changing how a match is assembled |
 | `SpawnZone` | Supplies ordered spawn transforms and faction data | Changing where a generated team may spawn |
+| `UnitPortraitBar` | Mirrors the friendly roster and synchronizes selection | Changing roster-level battle UI |
+| `UnitPortrait` | Displays one unit's HP, AP, and UI state | Changing the contents of a portrait card |
 
 ## Match setup and spawning
 
 `MatchSetup` collects two independent counts and configures a new `BattleLevel`. The level asks each `SpawnZone` for the requested number of marker transforms, instantiates the shared tactical-unit scene, fills the turn rosters, and adds one AI controller per enemy. Only then does it tell `BattleController` to scan and start the match.
 
 Unit coordinates do not live in spawning code. They are scene data under the two spawn zones. A future handmade or generated map can supply different zones without changing `BattleLevel`, but procedural generation itself is outside this task.
+
+## Portrait selection
+
+After units are registered, `BattleController.units_registered` gives the portrait bar the current friendly roster. Each portrait observes its own unit's HP, AP, and defeat signals. Portrait clicks ask `TurnManager` to select the unit; battlefield clicks use that same method. Both paths are reflected back through `active_unit_changed`, so the UI never keeps a separate selection.
+
+Exhausted and dead portraits remain visible but cannot be selected. A dead portrait remains as a record after its world unit leaves the active roster. Automatic selection of the next available unit belongs to Task 5 and is deliberately absent here.
 
 `Pathfinder`, `CombatRules`, `MapBuilder`, and actions are code objects rather than scene nodes. `RefCounted` lets Godot release them when no references remain. The battle owns one pathfinder; the scene no longer contains an unused second one.
 

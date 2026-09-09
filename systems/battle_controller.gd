@@ -4,6 +4,7 @@ class_name BattleController
 signal move_mode_toggled(is_active: bool)
 signal attack_mode_toggled(is_active: bool)
 signal action_state_changed(is_busy: bool)
+signal units_registered(player_units: Array[TacticalUnit])
 
 @export var tactical_unit: TacticalUnit
 @export var mouse_raycaster: MouseRaycaster
@@ -54,6 +55,7 @@ func initialize_battle() -> void:
 		var start_grid = world_to_grid(unit_item.global_position)
 		grid_manager.register_unit(unit_item, start_grid)
 		unit_item.defeated.connect(_on_unit_defeated)
+	units_registered.emit(turn_manager.player_units)
 
 	MapBuilder.build(grid_manager, pathfinder)
 	# Let CSG collision bodies enter the physics world before scanning.
