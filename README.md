@@ -33,7 +33,7 @@ Units start their phase with 2 AP and have 100 HP. Attacks deal 25 damage, or 12
 
 Start with [the architecture guide](docs/architecture.md): ownership, the path from a click to an action, cleanup changes, and known limitations.
 
-The prototype has A* paths, obstacle scanning, movement previews, selection, AP, shared actions, faction relationships, attacks, defense, enemy turns, battle results, a tactical camera, and health displays. It does not yet have elevation, procedural maps, or a finished tactical ruleset.
+The prototype has A* paths, typed terrain and cover data, obstacle scanning, movement previews, selection, AP, shared actions, faction relationships, attacks, defense, enemy turns, battle results, a tactical camera, and health displays. Cover data does not affect combat or movement yet, and the project does not yet have elevation, procedural maps, or a finished tactical ruleset.
 
 ## Verify changes
 
@@ -44,6 +44,7 @@ godot_console --headless --path . --editor --quit
 godot_console --headless --path . --script res://tests/battle_smoke.gd
 godot_console --headless --path . --script res://tests/match_setup_smoke.gd
 godot_console --headless --path . --script res://tests/portrait_bar_smoke.gd
+godot_console --headless --path . --script res://tests/map_data_smoke.gd
 ```
 
-The smoke test loads the real battle scene and checks terrain, movement, AP, attacks, walls, defense, enemy turns, and defeat cleanup. Play the scene to check appearance and combat feel.
+The smoke tests load the real battle scene and check terrain data, movement, AP, attacks, walls, defense, enemy turns, selection UI, and defeat cleanup. Play the scene to check appearance and combat feel.

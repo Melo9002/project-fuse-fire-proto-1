@@ -3,6 +3,7 @@ class_name GridManager
 
 @export var cell_size: float = 1.0
 @export var map_floor: CSGBox3D
+var map_data := MapData.new()
 var occupancy_map: Dictionary = {}
 
 signal unit_registered(unit: TacticalUnit, grid_pos: Vector3i)
@@ -30,6 +31,9 @@ func is_cell_occupied(grid_pos: Vector3i) -> bool:
 
 func get_unit_at(grid_pos: Vector3i) -> TacticalUnit:
 	return occupancy_map.get(grid_pos, null)
+
+func get_cell_data(grid_pos: Vector3i) -> MapCellData:
+	return map_data.get_cell(grid_pos)
 
 func can_unit_occupy_cell(_moving_unit: TacticalUnit, grid_pos: Vector3i) -> bool:
 	return not is_cell_occupied(grid_pos)

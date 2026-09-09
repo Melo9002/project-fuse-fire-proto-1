@@ -25,8 +25,10 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 | --- | --- | --- |
 | `BattleController` | Input, action modes, previews, action requests, defeat cleanup | Changing what clicking or choosing an action does |
 | `TurnManager` | Phases, active unit, rosters, rounds | Changing whose turn it is or when AP resets |
-| `MapBuilder` | Terrain cells and startup obstacle scan | Changing how map geometry becomes walkable data |
-| `GridManager` | Cell/world conversion and unit occupancy | Looking up who occupies a cell |
+| `MapBuilder` | Converts authored geometry into map cells and paths | Changing how a scene or future generator supplies terrain |
+| `MapData` / `MapCellData` | Terrain, elevation, cover, LOS, and traversal facts | Asking what a battlefield cell contains |
+| `TerrainFeature` | Inspector metadata for authored obstacles | Declaring cover without relying on node names or dimensions |
+| `GridManager` | Cell/world conversion, map data, and separate unit occupancy | Looking up terrain or who occupies a cell |
 | `Pathfinder` | A* routes and breadth-first movement range | Changing terrain traversal |
 | `CombatRules` | Faction, range, and line of sight | Changing legal attack targets |
 | `FactionRules` | Relationships between player, ally, enemy, and neutral | Changing who is hostile or friendly |
@@ -59,6 +61,8 @@ Exhausted and dead portraits remain visible but cannot be selected. A dead portr
 `TurnManager` observes AP for every friendly in the dynamic roster. When the selected unit reaches zero, it waits for any movement to finish and searches forward through the roster, wrapping once and skipping dead or exhausted units. If nobody can act, it emits `player_actions_exhausted`; the HUD emphasizes End Turn while the phase stays open for inspection.
 
 `Pathfinder`, `CombatRules`, `MapBuilder`, and actions are code objects rather than scene nodes. `RefCounted` lets Godot release them when no references remain. The battle owns one pathfinder; the scene no longer contains an unused second one.
+
+`MapData` is the runtime terrain description. Every `MapCellData` record stores its coordinate, world position, elevation, walkability, cover type, physical cover height, LOS blocking flag, and movement cost. Authored maps fill it through `MapBuilder`; a procedural generator can later produce the same records without changing gameplay systems. `GridManager.occupancy_map` remains separate because a unit standing on a tile does not change its terrain.
 
 ## Follow one move
 
