@@ -3,26 +3,15 @@ class_name GridManager
 
 @export var cell_size: float = 1.0
 @export var map_floor: CSGBox3D
-
-# Spatial Lookup Table: Key = Vector3i (grid_pos), Value = TacticalUnit
 var occupancy_map: Dictionary = {}
-
-# Reference to the Pathfinder service for automatic graph state synchronization
-var pathfinder: Pathfinder = null
 
 signal unit_registered(unit: TacticalUnit, grid_pos: Vector3i)
 signal unit_unregistered(unit: TacticalUnit, grid_pos: Vector3i)
-
-func set_pathfinder(pf: Pathfinder) -> void:
-	pathfinder = pf
-
-# --- OCCUPANCY REPOSITORY METHODS ---
 
 func register_unit(unit: TacticalUnit, grid_pos: Vector3i) -> void:
 	occupancy_map[grid_pos] = unit
 	print_rich("[color=cyan][GridManager][/color] Registered unit [b]%s[/b] at %s | Faction: %s" % [unit.name, grid_pos, unit.faction])
 	unit_registered.emit(unit, grid_pos)
-	
 
 func unregister_unit_at(grid_pos: Vector3i) -> void:
 	if occupancy_map.has(grid_pos):
@@ -30,12 +19,10 @@ func unregister_unit_at(grid_pos: Vector3i) -> void:
 		occupancy_map.erase(grid_pos)
 		unit_unregistered.emit(unit, grid_pos)
 
+## Reserve the destination before animation; occupancy never changes terrain.
 func update_unit_position(unit: TacticalUnit, from_grid: Vector3i, to_grid: Vector3i) -> void:
-	# 1. Clear old position. Occupancy never changes terrain walkability.
 	if occupancy_map.get(from_grid) == unit:
 		occupancy_map.erase(from_grid)
-			
-	# 2. Set the new occupancy entry without mutating the terrain path graph.
 	occupancy_map[to_grid] = unit
 
 func is_cell_occupied(grid_pos: Vector3i) -> bool:
@@ -44,24 +31,8 @@ func is_cell_occupied(grid_pos: Vector3i) -> bool:
 func get_unit_at(grid_pos: Vector3i) -> TacticalUnit:
 	return occupancy_map.get(grid_pos, null)
 
-# --- PASSTHROUGH & STOPPING RULES ---
-
-## Determines if a unit can pass THROUGH a cell during movement planning
-func can_unit_traverse_cell(moving_unit: TacticalUnit, grid_pos: Vector3i) -> bool:
-	if not is_cell_occupied(grid_pos):
-		return true
-		
-	var occupant = get_unit_at(grid_pos)
-	if moving_unit.faction == TacticalUnit.Faction.PLAYER or moving_unit.faction == TacticalUnit.Faction.ALLY:
-		return occupant.faction == TacticalUnit.Faction.PLAYER or occupant.faction == TacticalUnit.Faction.ALLY
-		
-	return occupant.faction == moving_unit.faction
-
-## Determines if a unit can END its turn on a target cell
 func can_unit_occupy_cell(_moving_unit: TacticalUnit, grid_pos: Vector3i) -> bool:
 	return not is_cell_occupied(grid_pos)
-
-# --- EXISTING COORDINATE CONVERSIONS ---
 
 func grid_to_world(grid_pos: Vector3i) -> Vector3:
 	if not map_floor:
@@ -70,7 +41,7 @@ func grid_to_world(grid_pos: Vector3i) -> Vector3:
 	var half_depth = map_floor.size.z / 2.0
 	var half_cell = cell_size / 2.0
 	var floor_top_y = map_floor.global_position.y + (map_floor.size.y / 2.0)
-	
+
 	var world_x = (float(grid_pos.x) * cell_size) - half_width + half_cell
 	var world_z = (float(grid_pos.z) * cell_size) - half_depth + half_cell
 	return Vector3(world_x, floor_top_y, world_z)

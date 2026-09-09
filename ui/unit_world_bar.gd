@@ -1,11 +1,8 @@
 class_name UnitWorldBar
 extends Control
 
-## Screen-Space UI mediator that tracks a 3D unit and renders HP, SP, and AP.
-
 @export_group("UI References")
 @export var hp_bar: ProgressBar
-@export var sp_bar: ProgressBar
 @export var ap_label: Label
 
 @export_group("3D Tracking Settings")
@@ -15,23 +12,20 @@ var _target_unit: Node3D
 var _stats: UnitStats
 var _active_camera: Camera3D
 
-# Note: faction is typed as int to prevent circular class dependency with TacticalUnit
+## Project the unit's world position into the UI layer each frame.
 func setup(unit: Node3D, stats: UnitStats, faction: int = 0) -> void:
 	_target_unit = unit
 	_stats = stats
-	
+
 	_apply_faction_style(faction)
-	
+
 	if _stats:
 		if not _stats.hp_changed.is_connected(_on_hp_changed):
 			_stats.hp_changed.connect(_on_hp_changed)
-		if not _stats.sp_changed.is_connected(_on_sp_changed):
-			_stats.sp_changed.connect(_on_sp_changed)
 		if not _stats.ap_changed.is_connected(_on_ap_changed):
 			_stats.ap_changed.connect(_on_ap_changed)
-			
+
 		_on_hp_changed(_stats.current_hp, _stats.max_hp)
-		_on_sp_changed(_stats.current_sp, _stats.max_sp)
 		_on_ap_changed(_stats.current_ap, _stats.max_ap)
 
 func _process(_delta: float) -> void:
@@ -43,9 +37,9 @@ func _process(_delta: float) -> void:
 		_active_camera = get_viewport().get_camera_3d()
 		if not _active_camera:
 			return
-			
+
 	var target_world_pos = _target_unit.global_position + world_offset
-	
+
 	if _active_camera.is_position_behind(target_world_pos):
 		hide()
 	else:
@@ -77,11 +71,6 @@ func _on_hp_changed(current: int, max_val: int) -> void:
 	if hp_bar:
 		hp_bar.max_value = max_val
 		hp_bar.value = current
-
-func _on_sp_changed(current: int, max_val: int) -> void:
-	if sp_bar:
-		sp_bar.max_value = max_val
-		sp_bar.value = current
 
 func _on_ap_changed(current: int, max_val: int) -> void:
 	if ap_label:

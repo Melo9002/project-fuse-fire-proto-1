@@ -9,9 +9,8 @@ func _ready() -> void:
 	if not turn_manager or not turn_label or not end_turn_button:
 		push_error("TurnHUDController: Missing UI dependencies!")
 		return
-		
-	# Bind to domain events
 	turn_manager.turn_phase_changed.connect(_on_turn_phase_changed)
+	turn_manager.battle_ended.connect(_on_battle_ended)
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
 
 func _on_turn_phase_changed(new_phase: TurnManager.TurnPhase) -> void:
@@ -33,3 +32,12 @@ func _on_end_turn_pressed() -> void:
 	print_rich("[color=cyan][UI][/color] End Turn button pressed!")
 	if turn_manager:
 		turn_manager.end_current_turn()
+
+func _on_battle_ended(result: TurnManager.BattleResult) -> void:
+	end_turn_button.disabled = true
+	if result == TurnManager.BattleResult.VICTORY:
+		turn_label.text = "VICTORY"
+		turn_label.modulate = Color.GREEN
+	else:
+		turn_label.text = "DEFEAT"
+		turn_label.modulate = Color.RED

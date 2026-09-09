@@ -1,13 +1,10 @@
 extends Node3D
 class_name MouseRaycaster
-
-# 1. THE MISSING LINK: Define the signal the BattleController is trying to connect to
 signal floor_clicked(raw_position: Vector3)
 signal unit_clicked(unit: TacticalUnit)
 
 @export var camera: Camera3D
 
-# 2. THE CLICK LISTENER: Listens for a physical left mouse click
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var clicked_unit = get_unit_under_mouse()
@@ -19,7 +16,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		if not floor_hit.is_empty():
 			floor_clicked.emit(floor_hit.position)
 
-# 3. THE HOVER ENGINE: Continuously used by the BattleController for the cursor highlight
 func get_floor_raycast_result() -> Dictionary:
 	if not camera:
 		camera = get_viewport().get_camera_3d()
@@ -30,17 +26,17 @@ func get_floor_raycast_result() -> Dictionary:
 	var ray_length = 1000.0
 	var from = camera.project_ray_origin(mouse_pos)
 	var to = from + camera.project_ray_normal(mouse_pos) * ray_length
-	
+
 	var space_state = get_world_3d().direct_space_state
 	var query = PhysicsRayQueryParameters3D.create(from, to)
-	
-	query.collision_mask = 2 
-	
+
+	query.collision_mask = 2
+
 	var result = space_state.intersect_ray(query)
-	
+
 	if result:
 		return result
-		
+
 	return {}
 
 func get_unit_under_mouse() -> TacticalUnit:

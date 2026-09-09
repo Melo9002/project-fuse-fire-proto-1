@@ -17,25 +17,20 @@ func is_valid() -> bool:
 		return false
 	if attacker.stats.is_defeated or target.stats.is_defeated:
 		return false
-	if attacker.faction == target.faction:
+	if not FactionRules.are_hostile(attacker.faction, target.faction):
 		return false
-		
+
 	if not attacker.stats.has_enough_ap(ap_cost):
 		return false
-		
+
 	return true
 
 func execute() -> bool:
 	if not is_valid():
 		return false
-		
-	# 1. Deduct the action cost.
 	attacker.stats.consume_ap(ap_cost)
-	
-	# 2. Execute combat transaction
 	var base_damage = 25
-	if target.stats.has_method("take_damage"):
-		target.stats.take_damage(base_damage)
-		
+	target.stats.take_damage(base_damage)
+
 	print_rich("[color=red][AttackAction][/color] %s fired at %s!" % [attacker.name, target.name])
 	return true
