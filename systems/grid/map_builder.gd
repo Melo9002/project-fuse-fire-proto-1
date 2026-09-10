@@ -18,6 +18,11 @@ static func build(grid: GridManager, pathfinder: Pathfinder) -> void:
 		if surface:
 			_add_elevated_surface(surface, grid, pathfinder)
 
+	for path_node in grid.get_tree().get_nodes_in_group("elevation_paths"):
+		var elevation_path = path_node as ElevationPath
+		if elevation_path:
+			_add_elevation_path(elevation_path, grid, pathfinder)
+
 static func scan_obstacles(world: World3D, grid: GridManager, pathfinder: Pathfinder) -> void:
 	var space_state = world.direct_space_state
 	var cell_box := BoxShape3D.new()
@@ -85,6 +90,24 @@ static func _add_elevated_surface(surface: ElevatedSurface, grid: GridManager, p
 			var world_position = grid.grid_to_world(elevated_cell)
 			grid.map_data.add_cell(MapCellData.new(elevated_cell, world_position))
 			pathfinder.add_walkable_cell(elevated_cell, world_position)
+
+static func _add_elevation_path(elevation_path: ElevationPath, grid: GridManager, pathfinder: Pathfinder) -> void:
+	for elevated_cell in elevation_path.get_cells():
+		var ground_cell := Vector3i(elevated_cell.x, 0, elevated_cell.z)
+		if elevation_path.blocks_ground:
+			var ground_data = grid.get_cell_data(ground_cell)
+			if ground_data:
+				ground_data.walkable = false
+				ground_data.can_stop = false
+				ground_data.cover_type = MapCellData.CoverType.FULL
+				ground_data.cover_height = float(elevated_cell.y) * grid.elevation_step
+				ground_data.blocks_line_of_sight = true
+				pathfinder.disable_cell(ground_cell)
+		if grid.map_data.has_cell(elevated_cell):
+			continue
+		var world_position = grid.grid_to_world(elevated_cell)
+		grid.map_data.add_cell(MapCellData.new(elevated_cell, world_position))
+		pathfinder.add_walkable_cell(elevated_cell, world_position)
 
 static func _apply_feature(cell: MapCellData, feature: TerrainFeature, pathfinder: Pathfinder) -> void:
 	if feature.cover_type < cell.cover_type:

@@ -27,25 +27,27 @@ func _run() -> void:
 	attacker.attack_range = 20
 	target.attack_range = 20
 
-	var ladder_bottom := Vector3i(5, 0, 4)
-	var ladder_top := Vector3i(5, 2, 3)
+	var ladder_bottom := Vector3i(7, 0, 6)
+	var ladder_top := Vector3i(7, 2, 5)
 	place(attacker, ladder_bottom, grid)
 	place(target, ladder_top, grid)
 	check(battle.evaluate_attack(attacker, target).is_legal, "A ground unit can see a target at the platform edge")
 	check(CombatRules.has_line_of_sight_to_position(attacker, grid.grid_to_world(ladder_top), grid, battle.get_world_3d()), "Elevated attack preview matches target validation")
 
-	place(attacker, Vector3i(7, 2, 2), grid)
-	place(target, Vector3i(15, 0, 2), grid)
+	var elevated_attacker := Vector3i(14, 2, 8)
+	grid.map_data.add_cell(MapCellData.new(elevated_attacker, grid.grid_to_world(elevated_attacker)))
+	place(attacker, elevated_attacker, grid)
+	place(target, Vector3i(18, 0, 8), grid)
 	check(not battle.evaluate_attack(attacker, target).is_legal, "A descending shot through a full-height wall is blocked")
 
-	var elevated_target := Vector3i(15, 2, 2)
+	var elevated_target := Vector3i(18, 2, 8)
 	grid.map_data.add_cell(MapCellData.new(elevated_target, grid.grid_to_world(elevated_target)))
 	place(target, elevated_target, grid)
 	check(battle.evaluate_attack(attacker, target).is_legal, "A level shot above a wall remains legal")
 
-	var target_above_low_cover := Vector3i(5, 2, 7)
+	var target_above_low_cover := Vector3i(9, 2, 9)
 	grid.map_data.add_cell(MapCellData.new(target_above_low_cover, grid.grid_to_world(target_above_low_cover)))
-	place(attacker, Vector3i(5, 0, 4), grid)
+	place(attacker, Vector3i(9, 0, 6), grid)
 	place(target, target_above_low_cover, grid)
 	var elevated_cover = battle.evaluate_attack(attacker, target)
 	check(elevated_cover.is_legal and elevated_cover.hit_chance == 100, "Ground-level low cover does not protect an elevated target")

@@ -1,6 +1,6 @@
 # Project FuseFire
 
-A 3D tactical combat prototype made in Godot 4.7. Choose independent player and enemy force sizes, then fight on a flat, 20 × 20 grid.
+A 3D tactical combat prototype made in Godot 4.7. Choose independent player and enemy force sizes, then fight on a multilayer 32×24 battlefield.
 
 ## Play
 
@@ -33,9 +33,9 @@ Units start their phase with 2 AP and have 100 HP. Attacks deal 25 damage, or 12
 
 Start with [the architecture guide](docs/architecture.md): ownership, the path from a click to an action, cleanup changes, and known limitations.
 
-The prototype has weighted A* paths, low-cover vaulting, directional cover, full-cover line of sight, movement previews, selection, AP, shared actions, faction relationships, attacks, defense, enemy turns, battle results, a tactical camera, and health displays. It does not yet have elevated terrain, procedural maps, or a finished tactical ruleset.
+The prototype has weighted 3D paths, low-cover vaulting, directional cover, elevation-aware line of sight, ladders, ramps, stairs, platforms, movement previews, selection, AP, shared actions, faction relationships, attacks, defense, enemy turns, battle results, a tactical camera, and health displays. It does not yet have procedural maps or a finished tactical ruleset.
 
-The 24×20 test battlefield is a systems lab: separated 5v5 spawn zones, open firing lanes, staggered low cover, full-cover walls, a narrow central crossing, and longer north/south routes.
+The 32×24 test battlefield is a systems lab: separated 5v5 spawn zones, long firing lanes, a central gate complex, a southern vault course, twin platforms, a three-route high platform, and stacked decks that allow units above and below the same X/Z position.
 
 Friendly units currently have an 8-tile attack range to make cover testing easier. Enemy units retain the prototype's 3-tile range.
 
@@ -52,6 +52,10 @@ godot_console --headless --path . --script res://tests/map_data_smoke.gd
 godot_console --headless --path . --script res://tests/combat_cover_smoke.gd
 godot_console --headless --path . --script res://tests/vault_smoke.gd
 godot_console --headless --path . --script res://tests/battlefield_layout_smoke.gd
+godot_console --headless --path . --script res://tests/elevation_smoke.gd
+godot_console --headless --path . --script res://tests/vertical_traversal_smoke.gd
+godot_console --headless --path . --script res://tests/elevation_combat_smoke.gd
+godot_console --headless --path . --script res://tests/battlefield_stress_smoke.gd
 ```
 
 The smoke tests load the real battle scene and check terrain data, movement, AP, attacks, walls, defense, enemy turns, selection UI, and defeat cleanup. Play the scene to check appearance and combat feel.

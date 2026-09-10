@@ -19,9 +19,9 @@ func _run() -> void:
 	var battle = level.battle_controller
 	var grid = battle.grid_manager
 	var unit: TacticalUnit = level.turn_manager.player_units[0]
-	var bottom := Vector3i(5, 0, 4)
-	var top := Vector3i(5, 2, 3)
-	var platform_destination := Vector3i(6, 2, 2)
+	var bottom := Vector3i(7, 0, 6)
+	var top := Vector3i(7, 2, 5)
+	var platform_destination := Vector3i(8, 2, 4)
 
 	unit.global_position = grid.grid_to_world(bottom) + Vector3.UP * unit.standing_height
 	grid.update_unit_position(unit, grid.get_unit_grid(unit), bottom)
@@ -34,6 +34,12 @@ func _run() -> void:
 	check(platform_path.size() > 1, "Elevated platform cells use ordinary horizontal pathfinding")
 	check(await battle.try_move(unit, platform_destination, platform_path), "A unit can move normally after reaching the platform")
 	check(grid.get_unit_grid(unit) == platform_destination, "Platform movement updates elevated occupancy")
+	var upper_cell := Vector3i(platform_destination.x, 5, platform_destination.z)
+	var upper_unit: TacticalUnit = level.turn_manager.enemy_units[0]
+	upper_unit.global_position = grid.grid_to_world(upper_cell) + Vector3.UP * upper_unit.standing_height
+	grid.update_unit_position(upper_unit, grid.get_unit_grid(upper_unit), upper_cell)
+	check(grid.get_unit_at(platform_destination) == unit and grid.get_unit_at(upper_cell) == upper_unit, "Two units can occupy the same X/Z on different decks")
+	check(not battle.pathfinder.calculate_3d_path(platform_destination, Vector3i(9, 2, 3)).is_empty(), "A unit can move beneath the suspended upper deck")
 
 	var bottom_id: int = battle.pathfinder.grid_to_id_map[bottom]
 	var top_id: int = battle.pathfinder.grid_to_id_map[top]

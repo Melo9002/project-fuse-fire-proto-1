@@ -8,11 +8,11 @@ extends Node3D
 @export var map_margin: float = 2.0
 @export var rotation_speed: float = 90.0
 @export var drag_sensitivity: float = 0.3
-@export var min_zoom: float = 18.0
-@export var max_zoom: float = 42.0
+@export var min_zoom: float = 20.0
+@export var max_zoom: float = 56.0
 @export var zoom_step: float = 3.0
 
-var _zoom: float = 34.0
+var _zoom: float = 42.0
 var _rotating: bool = false
 
 func _ready() -> void:

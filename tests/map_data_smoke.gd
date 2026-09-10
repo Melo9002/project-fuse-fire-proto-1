@@ -24,7 +24,7 @@ func _run() -> void:
 	var low_cover_data = grid.get_cell_data(low_cover_cell)
 	var open_data = grid.get_cell_data(open_cell)
 
-	check(grid.map_data.cells.size() == 492, "Map data contains ground and elevated platform cells")
+	check(grid.map_data.cells.size() == 876, "Map data contains the expanded ground and vertical test terrain")
 	check(wall_data != null and wall_data.walkable and not wall_data.can_stop, "Low cover can be crossed but not occupied")
 	check(wall_data != null and wall_data.cover_type == MapCellData.CoverType.LOW, "Small block exposes low cover")
 	check(wall_data != null and not wall_data.blocks_line_of_sight, "Small block permits shots")

@@ -18,13 +18,18 @@ func _run() -> void:
 
 	var battle = level.battle_controller
 	var grid = battle.grid_manager
-	check(grid.map_floor.size == Vector3(24, 1, 20), "Battlefield is 24 by 20 tiles")
-	check(grid.map_data.cells.size() == 492, "Map data contains 480 ground and 12 platform cells")
+	check(grid.map_floor.size == Vector3(32, 1, 24), "Battlefield is 32 by 24 tiles")
+	check(grid.map_data.cells.size() == 876, "Map data contains ground, platforms, ramp, and stair cells")
 	for obstacle in level.get_node("Environment/Obstacles").get_children():
 		var minimum = obstacle.position - obstacle.size * 0.5
 		var maximum = obstacle.position + obstacle.size * 0.5
 		check(is_equal_approx(minimum.x, roundf(minimum.x)) and is_equal_approx(maximum.x, roundf(maximum.x)), "%s aligns with x grid lines" % obstacle.name)
 		check(is_equal_approx(minimum.z, roundf(minimum.z)) and is_equal_approx(maximum.z, roundf(maximum.z)), "%s aligns with z grid lines" % obstacle.name)
+	for surface_node in level.get_tree().get_nodes_in_group("elevated_surfaces"):
+		var minimum = surface_node.position - surface_node.size * 0.5
+		var maximum = surface_node.position + surface_node.size * 0.5
+		check(is_equal_approx(minimum.x, roundf(minimum.x)) and is_equal_approx(maximum.x, roundf(maximum.x)), "%s aligns with x grid lines" % surface_node.name)
+		check(is_equal_approx(minimum.z, roundf(minimum.z)) and is_equal_approx(maximum.z, roundf(maximum.z)), "%s aligns with z grid lines" % surface_node.name)
 
 	var low_count := 0
 	var full_count := 0
@@ -39,15 +44,30 @@ func _run() -> void:
 	print("Battlefield cover cells: low=", low_count, " full=", full_count)
 	check(full_count > 10, "Battlefield contains substantial full-cover walls")
 
-	var ladder_bottom := Vector3i(5, 0, 4)
-	var ladder_top := Vector3i(5, 2, 3)
-	var platform_center := Vector3i(6, 2, 2)
+	var ladder_bottom := Vector3i(7, 0, 6)
+	var ladder_top := Vector3i(7, 2, 5)
+	var platform_center := Vector3i(8, 2, 4)
 	check(grid.get_cell_data(platform_center) != null and grid.get_cell_data(platform_center).can_stop, "Platform top is regular walkable terrain")
-	check(not grid.get_cell_data(Vector3i(6, 0, 2)).walkable, "Platform body blocks its ground footprint")
+	check(not grid.get_cell_data(Vector3i(8, 0, 4)).walkable, "Platform body blocks its ground footprint")
 	check(grid.world_to_grid(grid.grid_to_world(platform_center)) == platform_center, "Platform clicks resolve to the elevated cell")
-	check(grid.map_data.traversal_links.size() == 1, "The authored ladder becomes reusable MapData")
+	check(grid.map_data.traversal_links.size() == 4, "Every authored ladder becomes reusable MapData")
 	check(battle.pathfinder.calculate_3d_path(ladder_bottom, ladder_top).size() == 2, "Ladder explicitly connects its floor and platform cells")
 	check(not battle.pathfinder.calculate_3d_path(ladder_bottom, platform_center).is_empty(), "Platform uses normal pathfinding after the ladder")
+
+	var lower_deck := Vector3i(8, 2, 3)
+	var upper_deck := Vector3i(8, 5, 3)
+	check(grid.map_data.has_cell(lower_deck) and grid.map_data.has_cell(upper_deck), "Stacked decks share X/Z with independent elevation cells")
+	check(grid.get_cell_data(lower_deck).can_stop and grid.get_cell_data(upper_deck).can_stop, "Both stacked decks are valid destinations")
+	check(not battle.pathfinder.calculate_3d_path(Vector3i(7, 2, 5), Vector3i(7, 5, 4)).is_empty(), "The upper-deck ladder joins both platform levels")
+
+	var high_platform := Vector3i(16, 4, 3)
+	check(grid.get_cell_data(high_platform) != null and grid.get_cell_data(high_platform).can_stop, "The elevation-four platform is ordinary walkable terrain")
+	check(not battle.pathfinder.calculate_3d_path(Vector3i(14, 0, 9), high_platform).is_empty(), "The ramp reaches the high platform")
+	check(not battle.pathfinder.calculate_3d_path(Vector3i(18, 0, 9), high_platform).is_empty(), "The stairs reach the high platform")
+	check(not battle.pathfinder.calculate_3d_path(Vector3i(16, 0, 0), high_platform).is_empty(), "The ladder independently reaches the high platform")
+	for elevation_path_node in level.get_tree().get_nodes_in_group("elevation_paths"):
+		var heights = (elevation_path_node as ElevationPath).get_cells().map(func(cell: Vector3i) -> int: return cell.y)
+		check(heights == [1, 2, 3, 4], "%s contributes a continuous elevation sequence" % elevation_path_node.name)
 
 	for unit in level.turn_manager.player_units + level.turn_manager.enemy_units:
 		var spawn_cell = grid.world_to_grid(unit.global_position)
@@ -60,7 +80,7 @@ func _run() -> void:
 			var target = grid.world_to_grid(enemy.global_position)
 			check(not battle.pathfinder.calculate_3d_path(start, target).is_empty(), "%s can reach %s" % [player.name, enemy.name])
 
-	for route in [Vector3(0.5, 0, -9.5), Vector3(0.5, 0, 0.5), Vector3(0.5, 0, 9.5)]:
+	for route in [Vector3(-4.5, 0, -11.5), Vector3(0.5, 0, 0.5), Vector3(0.5, 0, 11.5)]:
 		check(grid.get_cell_data(grid.world_to_grid(route)).can_stop, "North, center, and south crossings remain open")
 
 	level.queue_free()

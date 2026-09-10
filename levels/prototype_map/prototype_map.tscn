@@ -21,6 +21,7 @@
 [ext_resource type="Script" path="res://visualizers/cover_visualizer.gd" id="22_cover"]
 [ext_resource type="Script" path="res://systems/grid/elevated_surface.gd" id="23_surface"]
 [ext_resource type="Script" path="res://systems/grid/traversal_link.gd" id="24_link"]
+[ext_resource type="Script" path="res://systems/grid/elevation_path.gd" id="25_elevation_path"]
 
 [sub_resource type="Environment" id="Environment_8x357"]
 
@@ -61,7 +62,7 @@ map_floor = NodePath("../Environment/MapFloor")
 camera = NodePath("Camera3D")
 
 [node name="Camera3D" type="Camera3D" parent="CameraRig" unique_id=743300731]
-position = Vector3(0, 0, 34)
+position = Vector3(0, 0, 42)
 fov = 25.70093
 
 [node name="Systems" type="Node3D" parent="." unique_id=635339450]
@@ -104,7 +105,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 use_collision = true
 collision_layer = 2
 collision_mask = 2
-size = Vector3(24, 1, 20)
+size = Vector3(32, 1, 24)
 
 [node name="Obstacles" type="Node3D" parent="Environment" unique_id=278799896]
 
@@ -210,47 +211,338 @@ cover_height = 2.0
 blocks_line_of_sight = true
 
 [node name="NorthwestPlatform" type="CSGBox3D" parent="Environment"]
-position = Vector3(-6, 1, -7.5)
+position = Vector3(-8, 1, -8.5)
 use_collision = true
 collision_layer = 3
 collision_mask = 3
-size = Vector3(4, 2, 3)
+size = Vector3(6, 2, 5)
 material = SubResource("StandardMaterial3D_platform")
 script = ExtResource("23_surface")
 elevation_level = 2
 
 [node name="NorthwestLadder" type="Node3D" parent="Environment"]
 script = ExtResource("24_link")
-from_cell = Vector3i(5, 0, 4)
-to_cell = Vector3i(5, 2, 3)
+from_cell = Vector3i(7, 0, 6)
+to_cell = Vector3i(7, 2, 5)
 
 [node name="LeftRail" type="CSGBox3D" parent="Environment/NorthwestLadder"]
-position = Vector3(-6.8, 1, -5.92)
+position = Vector3(-8.8, 1, -5.92)
 size = Vector3(0.08, 2, 0.08)
 material = SubResource("StandardMaterial3D_ladder")
 
 [node name="RightRail" type="CSGBox3D" parent="Environment/NorthwestLadder"]
-position = Vector3(-6.2, 1, -5.92)
+position = Vector3(-8.2, 1, -5.92)
 size = Vector3(0.08, 2, 0.08)
 material = SubResource("StandardMaterial3D_ladder")
 
 [node name="Rung1" type="CSGBox3D" parent="Environment/NorthwestLadder"]
-position = Vector3(-6.5, 0.35, -5.92)
+position = Vector3(-8.5, 0.35, -5.92)
 size = Vector3(0.68, 0.08, 0.08)
 material = SubResource("StandardMaterial3D_ladder")
 
 [node name="Rung2" type="CSGBox3D" parent="Environment/NorthwestLadder"]
-position = Vector3(-6.5, 0.85, -5.92)
+position = Vector3(-8.5, 0.85, -5.92)
 size = Vector3(0.68, 0.08, 0.08)
 material = SubResource("StandardMaterial3D_ladder")
 
 [node name="Rung3" type="CSGBox3D" parent="Environment/NorthwestLadder"]
-position = Vector3(-6.5, 1.35, -5.92)
+position = Vector3(-8.5, 1.35, -5.92)
 size = Vector3(0.68, 0.08, 0.08)
 material = SubResource("StandardMaterial3D_ladder")
 
 [node name="Rung4" type="CSGBox3D" parent="Environment/NorthwestLadder"]
-position = Vector3(-6.5, 1.85, -5.92)
+position = Vector3(-8.5, 1.85, -5.92)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="NortheastPlatform" type="CSGBox3D" parent="Environment"]
+position = Vector3(8, 1, -8.5)
+use_collision = true
+collision_layer = 3
+collision_mask = 3
+size = Vector3(6, 2, 5)
+material = SubResource("StandardMaterial3D_platform")
+script = ExtResource("23_surface")
+elevation_level = 2
+
+[node name="NortheastLadder" type="Node3D" parent="Environment"]
+script = ExtResource("24_link")
+from_cell = Vector3i(24, 0, 6)
+to_cell = Vector3i(24, 2, 5)
+
+[node name="LeftRail" type="CSGBox3D" parent="Environment/NortheastLadder"]
+position = Vector3(8.2, 1, -5.92)
+size = Vector3(0.08, 2, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="RightRail" type="CSGBox3D" parent="Environment/NortheastLadder"]
+position = Vector3(8.8, 1, -5.92)
+size = Vector3(0.08, 2, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung1" type="CSGBox3D" parent="Environment/NortheastLadder"]
+position = Vector3(8.5, 0.35, -5.92)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung2" type="CSGBox3D" parent="Environment/NortheastLadder"]
+position = Vector3(8.5, 0.85, -5.92)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung3" type="CSGBox3D" parent="Environment/NortheastLadder"]
+position = Vector3(8.5, 1.35, -5.92)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung4" type="CSGBox3D" parent="Environment/NortheastLadder"]
+position = Vector3(8.5, 1.85, -5.92)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="WestFlankPillar" type="CSGBox3D" parent="Environment/Obstacles"]
+position = Vector3(-10.5, 1, 1)
+use_collision = true
+size = Vector3(1, 2, 4)
+material = SubResource("StandardMaterial3D_full")
+script = ExtResource("21_terrain")
+cover_type = 2
+cover_height = 2.0
+blocks_line_of_sight = true
+
+[node name="EastFlankPillar" type="CSGBox3D" parent="Environment/Obstacles"]
+position = Vector3(10.5, 1, -1)
+use_collision = true
+size = Vector3(1, 2, 4)
+material = SubResource("StandardMaterial3D_full")
+script = ExtResource("21_terrain")
+cover_type = 2
+cover_height = 2.0
+blocks_line_of_sight = true
+
+[node name="SouthVaultWest" type="CSGBox3D" parent="Environment/Obstacles"]
+position = Vector3(-10, 0.5, 8.5)
+use_collision = true
+size = Vector3(6, 1, 1)
+material = SubResource("StandardMaterial3D_ebqvm")
+script = ExtResource("21_terrain")
+cover_type = 1
+cover_height = 1.0
+movement_cost = 2
+
+[node name="SouthVaultCenter" type="CSGBox3D" parent="Environment/Obstacles"]
+position = Vector3(-2.5, 0.5, 9.5)
+use_collision = true
+size = Vector3(5, 1, 1)
+material = SubResource("StandardMaterial3D_ebqvm")
+script = ExtResource("21_terrain")
+cover_type = 1
+cover_height = 1.0
+movement_cost = 2
+
+[node name="SouthVaultEast" type="CSGBox3D" parent="Environment/Obstacles"]
+position = Vector3(6, 0.5, 8.5)
+use_collision = true
+size = Vector3(6, 1, 1)
+material = SubResource("StandardMaterial3D_ebqvm")
+script = ExtResource("21_terrain")
+cover_type = 1
+cover_height = 1.0
+movement_cost = 2
+
+[node name="NorthLowWest" type="CSGBox3D" parent="Environment/Obstacles"]
+position = Vector3(-13, 0.5, -10.5)
+use_collision = true
+size = Vector3(4, 1, 1)
+material = SubResource("StandardMaterial3D_ebqvm")
+script = ExtResource("21_terrain")
+cover_type = 1
+cover_height = 1.0
+movement_cost = 2
+
+[node name="NorthLowEast" type="CSGBox3D" parent="Environment/Obstacles"]
+position = Vector3(13, 0.5, -10.5)
+use_collision = true
+size = Vector3(4, 1, 1)
+material = SubResource("StandardMaterial3D_ebqvm")
+script = ExtResource("21_terrain")
+cover_type = 1
+cover_height = 1.0
+movement_cost = 2
+
+[node name="HighPlatform" type="CSGBox3D" parent="Environment"]
+position = Vector3(0, 2, -8.5)
+use_collision = true
+collision_layer = 3
+collision_mask = 3
+size = Vector3(6, 4, 5)
+material = SubResource("StandardMaterial3D_platform")
+script = ExtResource("23_surface")
+elevation_level = 4
+
+[node name="HighPlatformLadder" type="Node3D" parent="Environment"]
+script = ExtResource("24_link")
+from_cell = Vector3i(16, 0, 0)
+to_cell = Vector3i(16, 4, 1)
+
+[node name="LeftRail" type="CSGBox3D" parent="Environment/HighPlatformLadder"]
+position = Vector3(0.2, 2, -11.08)
+size = Vector3(0.08, 4, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="RightRail" type="CSGBox3D" parent="Environment/HighPlatformLadder"]
+position = Vector3(0.8, 2, -11.08)
+size = Vector3(0.08, 4, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung1" type="CSGBox3D" parent="Environment/HighPlatformLadder"]
+position = Vector3(0.5, 0.35, -11.08)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung2" type="CSGBox3D" parent="Environment/HighPlatformLadder"]
+position = Vector3(0.5, 0.85, -11.08)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung3" type="CSGBox3D" parent="Environment/HighPlatformLadder"]
+position = Vector3(0.5, 1.35, -11.08)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung4" type="CSGBox3D" parent="Environment/HighPlatformLadder"]
+position = Vector3(0.5, 1.85, -11.08)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung5" type="CSGBox3D" parent="Environment/HighPlatformLadder"]
+position = Vector3(0.5, 2.35, -11.08)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung6" type="CSGBox3D" parent="Environment/HighPlatformLadder"]
+position = Vector3(0.5, 2.85, -11.08)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung7" type="CSGBox3D" parent="Environment/HighPlatformLadder"]
+position = Vector3(0.5, 3.35, -11.08)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung8" type="CSGBox3D" parent="Environment/HighPlatformLadder"]
+position = Vector3(0.5, 3.85, -11.08)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="HighPlatformRamp" type="Node3D" parent="Environment"]
+script = ExtResource("25_elevation_path")
+start_cell = Vector3i(14, 0, 8)
+direction = Vector3i(0, 0, -1)
+step_count = 4
+start_elevation = 1
+
+[node name="RampMesh" type="CSGBox3D" parent="Environment/HighPlatformRamp"]
+position = Vector3(-1.5, 2.5, -5)
+rotation_degrees = Vector3(45, 0, 0)
+use_collision = true
+collision_layer = 2
+collision_mask = 2
+size = Vector3(1, 0.18, 5.65)
+material = SubResource("StandardMaterial3D_platform")
+
+[node name="HighPlatformStairs" type="Node3D" parent="Environment"]
+script = ExtResource("25_elevation_path")
+start_cell = Vector3i(18, 0, 8)
+direction = Vector3i(0, 0, -1)
+step_count = 4
+start_elevation = 1
+
+[node name="Step1" type="CSGBox3D" parent="Environment/HighPlatformStairs"]
+position = Vector3(2.5, 0.5, -3.5)
+use_collision = true
+collision_layer = 2
+collision_mask = 2
+size = Vector3(1, 1, 1)
+material = SubResource("StandardMaterial3D_platform")
+
+[node name="Step2" type="CSGBox3D" parent="Environment/HighPlatformStairs"]
+position = Vector3(2.5, 1, -4.5)
+use_collision = true
+collision_layer = 2
+collision_mask = 2
+size = Vector3(1, 2, 1)
+material = SubResource("StandardMaterial3D_platform")
+
+[node name="Step3" type="CSGBox3D" parent="Environment/HighPlatformStairs"]
+position = Vector3(2.5, 1.5, -5.5)
+use_collision = true
+collision_layer = 2
+collision_mask = 2
+size = Vector3(1, 3, 1)
+material = SubResource("StandardMaterial3D_platform")
+
+[node name="Step4" type="CSGBox3D" parent="Environment/HighPlatformStairs"]
+position = Vector3(2.5, 2, -6.5)
+use_collision = true
+collision_layer = 2
+collision_mask = 2
+size = Vector3(1, 4, 1)
+material = SubResource("StandardMaterial3D_platform")
+
+[node name="NorthwestUpperDeck" type="CSGBox3D" parent="Environment"]
+position = Vector3(-8, 4.85, -8.5)
+use_collision = true
+collision_layer = 2
+collision_mask = 2
+size = Vector3(4, 0.3, 3)
+material = SubResource("StandardMaterial3D_platform")
+script = ExtResource("23_surface")
+elevation_level = 5
+blocks_ground = false
+
+[node name="UpperDeckLadder" type="Node3D" parent="Environment"]
+script = ExtResource("24_link")
+from_cell = Vector3i(7, 2, 5)
+to_cell = Vector3i(7, 5, 4)
+
+[node name="LeftRail" type="CSGBox3D" parent="Environment/UpperDeckLadder"]
+position = Vector3(-8.8, 3.5, -6.92)
+size = Vector3(0.08, 3, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="RightRail" type="CSGBox3D" parent="Environment/UpperDeckLadder"]
+position = Vector3(-8.2, 3.5, -6.92)
+size = Vector3(0.08, 3, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung1" type="CSGBox3D" parent="Environment/UpperDeckLadder"]
+position = Vector3(-8.5, 2.35, -6.92)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung2" type="CSGBox3D" parent="Environment/UpperDeckLadder"]
+position = Vector3(-8.5, 2.85, -6.92)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung3" type="CSGBox3D" parent="Environment/UpperDeckLadder"]
+position = Vector3(-8.5, 3.35, -6.92)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung4" type="CSGBox3D" parent="Environment/UpperDeckLadder"]
+position = Vector3(-8.5, 3.85, -6.92)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung5" type="CSGBox3D" parent="Environment/UpperDeckLadder"]
+position = Vector3(-8.5, 4.35, -6.92)
+size = Vector3(0.68, 0.08, 0.08)
+material = SubResource("StandardMaterial3D_ladder")
+
+[node name="Rung6" type="CSGBox3D" parent="Environment/UpperDeckLadder"]
+position = Vector3(-8.5, 4.85, -6.92)
 size = Vector3(0.68, 0.08, 0.08)
 material = SubResource("StandardMaterial3D_ladder")
 
@@ -267,38 +559,38 @@ script = ExtResource("17_zone")
 faction = 0
 
 [node name="Point1" type="Marker3D" parent="SpawnZones/PlayerSpawnZone"]
-position = Vector3(-10.5, 1, -1.5)
+position = Vector3(-14.5, 1, -3.5)
 
 [node name="Point2" type="Marker3D" parent="SpawnZones/PlayerSpawnZone"]
-position = Vector3(-10.5, 1, 0.5)
+position = Vector3(-14.5, 1, -1.5)
 
 [node name="Point3" type="Marker3D" parent="SpawnZones/PlayerSpawnZone"]
-position = Vector3(-10.5, 1, 2.5)
+position = Vector3(-14.5, 1, 0.5)
 
 [node name="Point4" type="Marker3D" parent="SpawnZones/PlayerSpawnZone"]
-position = Vector3(-8.5, 1, -0.5)
+position = Vector3(-12.5, 1, 2.5)
 
 [node name="Point5" type="Marker3D" parent="SpawnZones/PlayerSpawnZone"]
-position = Vector3(-8.5, 1, 1.5)
+position = Vector3(-12.5, 1, 4.5)
 
 [node name="EnemySpawnZone" type="Node3D" parent="SpawnZones"]
 script = ExtResource("17_zone")
 faction = 1
 
 [node name="Point1" type="Marker3D" parent="SpawnZones/EnemySpawnZone"]
-position = Vector3(10.5, 1, 1.5)
+position = Vector3(14.5, 1, 3.5)
 
 [node name="Point2" type="Marker3D" parent="SpawnZones/EnemySpawnZone"]
-position = Vector3(10.5, 1, -0.5)
+position = Vector3(14.5, 1, 1.5)
 
 [node name="Point3" type="Marker3D" parent="SpawnZones/EnemySpawnZone"]
-position = Vector3(10.5, 1, -2.5)
+position = Vector3(14.5, 1, -0.5)
 
 [node name="Point4" type="Marker3D" parent="SpawnZones/EnemySpawnZone"]
-position = Vector3(8.5, 1, 0.5)
+position = Vector3(12.5, 1, -2.5)
 
 [node name="Point5" type="Marker3D" parent="SpawnZones/EnemySpawnZone"]
-position = Vector3(8.5, 1, -1.5)
+position = Vector3(12.5, 1, -4.5)
 
 [node name="Visualizers" type="Node3D" parent="." unique_id=1615445199]
 

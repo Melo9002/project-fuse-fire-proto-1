@@ -19,9 +19,9 @@ func _run() -> void:
 	var grid = battle.grid_manager
 	var unit = battle.turn_manager.player_units[0]
 	var old_cell = grid.world_to_grid(unit.global_position)
-	var start = Vector3i(13, 0, 12)
-	var cover = Vector3i(14, 0, 12)
-	var destination = Vector3i(15, 0, 12)
+	var start = Vector3i(17, 0, 14)
+	var cover = Vector3i(18, 0, 14)
+	var destination = Vector3i(19, 0, 14)
 	unit.global_position = grid.grid_to_world(start) + Vector3.UP * unit.standing_height
 	grid.update_unit_position(unit, old_cell, start)
 

@@ -29,6 +29,7 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 | `MapData` / `MapCellData` | Terrain, elevation, cover, LOS, and traversal facts | Asking what a battlefield cell contains |
 | `TerrainFeature` | Inspector metadata for authored obstacles | Declaring cover without relying on node names or dimensions |
 | `ElevatedSurface` | Inspector metadata that produces elevated walkable cells | Authoring rooftops, platforms, or bridges |
+| `ElevationPath` | Produces a sequence of rising walkable cells | Authoring stairs and ramps without special unit movement |
 | `TraversalLink` | Converts an authored ladder connection into map data | Connecting terrain that normal height rules cannot join |
 | `GridManager` | Cell/world conversion, map data, and separate unit occupancy | Looking up terrain or who occupies a cell |
 | `Pathfinder` | A* routes and breadth-first movement range | Changing terrain traversal |
@@ -70,6 +71,8 @@ The Y component of a cell coordinate is its elevation level. `GridManager.elevat
 
 An authored `ElevatedSurface` contributes regular `MapCellData` records at its declared elevation. Its solid footprint disables the ground beneath it. A `TraversalLink` contributes `TraversalLinkData` to the map and joins two specified cells in the path graph. The current northwest platform is two levels high, so it remains unreachable when its ladder link is removed. Once a unit climbs onto it, movement uses the same cells and rules as the ground.
 
+`ElevationPath` contributes a sequence of cells with increasing Y coordinates. Stairs and ramps therefore share pathfinding rules; only their scene geometry differs. A suspended surface can preserve lower cells in the same X/Z columns, allowing separate units and paths above and below it.
+
 Movement distinguishes crossing a cell from ending on it. Floor cells cost one movement point and accept units. Low cover stays connected, costs two points, and cannot be a destination; the movement path raises the unit by the declared cover height while crossing it. Full cover is disconnected. Every completed Move action still costs one AP.
 
 `CoverVisualizer` draws a short edge inside each reachable destination beside cover while Move mode is active. The edge faces the obstacle, matching directional combat cover. Low and full cover use separate materials, and leaving Move mode clears both.
@@ -97,7 +100,7 @@ Attack previews derive the destination body center from the same elevated grid c
 
 Authored obstacles declare their cover type and physical height. The current map uses bright 1 m low cover and darker 2 m full cover. Enable `Debug Shots` on `BattleController` to log attempted targets, legality, chance, and the blocking terrain cell when present.
 
-The test battlefield is 24×20. Friendly and enemy spawn zones sit on opposite sides. Staggered low cover supports vaulting and directional protection; two central full-cover wall segments leave north, center, and south routes. A northwest platform and explicit ladder provide the first vertical route.
+The 32×24 test battlefield is a systems laboratory. Opposing 5-unit spawn zones sit beyond long firing lanes. The center contains full-cover gates and flank pillars, the south contains staggered vault barriers, and the north contains twin platforms. A higher central platform can be reached independently by ramp, stairs, or ladder. A suspended northwest deck also verifies movement and occupancy above and below the same X/Z columns.
 
 At zero HP, stats announce defeat. The unit relays the signal, and the battle removes it from occupancy and the roster before freeing it.
 
