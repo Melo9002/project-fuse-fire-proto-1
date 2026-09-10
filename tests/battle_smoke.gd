@@ -70,10 +70,14 @@ func _run() -> void:
 	grid.update_unit_position(enemy, blocker_cell, target_cell)
 	var blocker_data = grid.get_cell_data(blocker_cell)
 	blocker_data.cover_type = MapCellData.CoverType.FULL
+	blocker_data.cover_height = 2.0
 	blocker_data.blocks_line_of_sight = true
+	grid.map_data.rebuild_los_index()
 	check(not battle.can_attack(player, enemy), "Full-cover map data blocks shots")
 	blocker_data.cover_type = MapCellData.CoverType.NONE
+	blocker_data.cover_height = 0.0
 	blocker_data.blocks_line_of_sight = false
+	grid.map_data.rebuild_los_index()
 
 	turns.end_current_turn()
 	await create_timer(6.0).timeout

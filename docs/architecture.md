@@ -89,9 +89,11 @@ A **signal** is an announcement: `ap_changed` lets UI update without stats knowi
 
 Attack mode makes an enemy click call `BattleController.try_attack()`. `CombatRules.evaluate_attack()` returns legality, hit chance, directional cover, and a reason. Clear shots have 100% accuracy, low cover on the target-facing edge gives 50%, and full cover intersecting the line makes the attack illegal. `AttackAction` spends AP and resolves the roll; hits deal full damage and misses deal none. AI attacks use the same controller entry point.
 
-Line of sight reads the terrain description rather than using pathfinding or raw obstacle collisions. Unwalkable low cover can reduce accuracy without blocking a shot; cells marked as LOS-blocking full cover make it illegal. This keeps authored and future generated maps on the same rules.
+Line of sight reads the terrain description rather than using pathfinding or raw obstacle collisions. Each blocking cell forms a vertical volume from its terrain elevation through its declared cover height. Combat tests the 3D segment between the attacker and target body centers against those volumes. A shot can therefore pass above a wall, while a descending shot that crosses the same wall remains blocked.
 
-Flat-map LOS traverses cells exactly between tile centers. Floor previews and unit targets use identical coordinates regardless of model height. A line touching only a cell corner does not enter that cell; crossing its interior does.
+`MapData.los_blocking_cells` indexes only terrain that can stop a shot. Map construction rebuilds this index after applying authored features; dynamic terrain should rebuild it after changing LOS flags or heights.
+
+Attack previews derive the destination body center from the same elevated grid cell used by target validation. Low cover is directional and queried on the target's elevation layer, so ground cover does not protect a unit standing on a platform. Touching only the outer boundary or corner of an obstacle does not block a shot.
 
 Authored obstacles declare their cover type and physical height. The current map uses bright 1 m low cover and darker 2 m full cover. Enable `Debug Shots` on `BattleController` to log attempted targets, legality, chance, and the blocking terrain cell when present.
 
@@ -133,7 +135,6 @@ Physics collision layers are separate from visual render layers. Map setup waits
 - Attack-range coloring shows legal cells, while the attack button shows the exact hovered unit chance or blocked reason.
 - The global action lock prevents selection, new actions, and phase changes during movement. Attacks and defense are currently immediate, so they do not hold the lock across an animation.
 - The base grid assumes an unrotated floor centered on world X/Z. Elevated surfaces add layers above it, but moving or rotating the base is not supported by all conversions and visuals.
-- Combat still uses the flat-map LOS traversal; elevation-aware visibility belongs to Task 13.
 - Terrain is scanned only at startup; moving walls later will not rebuild paths.
 - Victory and Defeat are text states in the existing turn HUD; a dedicated result screen can come later.
 

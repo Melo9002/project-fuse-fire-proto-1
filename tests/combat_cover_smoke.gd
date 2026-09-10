@@ -33,6 +33,7 @@ func _run() -> void:
 	check(level.get_node("Environment/Obstacles/CentralLowBlock").size.y == small_block.cover_height, "Small block height matches metadata")
 	# Include full cover in the exhaustive LOS comparison.
 	small_block.blocks_line_of_sight = true
+	grid.map_data.rebuild_los_index()
 	for source in grid.map_data.cells:
 		if not grid.get_cell_data(source).walkable:
 			continue
@@ -50,12 +51,16 @@ func _run() -> void:
 	check(mismatches == 0, "Floor and unit LOS must agree for every walkable cell pair: %d mismatches" % mismatches)
 	var corner_blocker = grid.get_cell_data(Vector3i(2, 0, 2))
 	corner_blocker.blocks_line_of_sight = true
+	corner_blocker.cover_height = 2.0
+	grid.map_data.rebuild_los_index()
 	place(attacker, Vector3i(1, 0, 2), grid)
 	place(target, Vector3i(2, 0, 1), grid)
 	check(battle.evaluate_attack(attacker, target).is_legal, "Touching a full-cover corner alone permits a shot")
 	place(target, Vector3i(3, 0, 2), grid)
 	check(not battle.evaluate_attack(attacker, target).is_legal, "Crossing the interior of full cover blocks a shot")
 	corner_blocker.blocks_line_of_sight = false
+	corner_blocker.cover_height = 0.0
+	grid.map_data.rebuild_los_index()
 
 	# The z=6 low barrier protects only the side facing the attacker.
 	place(attacker, Vector3i(5, 0, 4), grid)
@@ -87,6 +92,7 @@ func _run() -> void:
 
 	attacker.stats.current_ap = attacker.stats.max_ap
 	small_block.blocks_line_of_sight = false
+	grid.map_data.rebuild_los_index()
 	target.stats.current_hp = target.stats.max_hp
 	var forced_miss = AttackAction.new(attacker, target, 1, 50, 75.0)
 	check(forced_miss.execute() and not forced_miss.did_hit, "A failed hit roll performs a miss")

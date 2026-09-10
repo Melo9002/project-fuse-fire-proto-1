@@ -4,6 +4,7 @@ extends RefCounted
 var cells: Dictionary = {}
 var columns: Dictionary = {}
 var traversal_links: Array[TraversalLinkData] = []
+var los_blocking_cells: Array[MapCellData] = []
 
 func add_cell(cell: MapCellData) -> void:
 	cells[cell.grid_position] = cell
@@ -31,7 +32,14 @@ func get_column_cells(x: int, z: int) -> Array[MapCellData]:
 func add_traversal_link(link: TraversalLinkData) -> void:
 	traversal_links.append(link)
 
+func rebuild_los_index() -> void:
+	los_blocking_cells.clear()
+	for cell: MapCellData in cells.values():
+		if cell.blocks_line_of_sight and cell.cover_height > 0.0:
+			los_blocking_cells.append(cell)
+
 func clear() -> void:
 	cells.clear()
 	columns.clear()
 	traversal_links.clear()
+	los_blocking_cells.clear()

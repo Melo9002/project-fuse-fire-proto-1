@@ -64,6 +64,8 @@ static func scan_obstacles(world: World3D, grid: GridManager, pathfinder: Pathfi
 		if not pathfinder.connect_cells(link_data.from_cell, link_data.to_cell, link_data.bidirectional):
 			push_error("TraversalLink %s references missing cells" % link.name)
 
+	grid.map_data.rebuild_los_index()
+
 static func _add_elevated_surface(surface: ElevatedSurface, grid: GridManager, pathfinder: Pathfinder) -> void:
 	for x in range(int(grid.map_floor.size.x / grid.cell_size)):
 		for z in range(int(grid.map_floor.size.z / grid.cell_size)):
@@ -75,6 +77,9 @@ static func _add_elevated_surface(surface: ElevatedSurface, grid: GridManager, p
 				if ground_data:
 					ground_data.walkable = false
 					ground_data.can_stop = false
+					ground_data.cover_type = MapCellData.CoverType.FULL
+					ground_data.cover_height = float(surface.elevation_level) * grid.elevation_step
+					ground_data.blocks_line_of_sight = true
 					pathfinder.disable_cell(ground_cell)
 			var elevated_cell := Vector3i(x, surface.elevation_level, z)
 			var world_position = grid.grid_to_world(elevated_cell)
