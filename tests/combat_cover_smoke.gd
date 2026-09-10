@@ -21,6 +21,7 @@ func _run() -> void:
 
 	var battle: BattleController = level.get_node("Systems/BattleController")
 	var grid = battle.grid_manager
+	var trajectory := level.get_node("Visualizers/ShotTrajectoryVisualizer") as ShotTrajectoryVisualizer
 	var attacker = battle.turn_manager.player_units[0]
 	var target = battle.turn_manager.enemy_units[0]
 	check(attacker.attack_range == 5, "Friendly units use the configured test range")
@@ -88,11 +89,19 @@ func _run() -> void:
 	place(target, Vector3i(18, 0, 8), grid)
 	var full_cover = battle.evaluate_attack(attacker, target)
 	check(not full_cover.is_legal and full_cover.reason == "Blocked", "Full cover makes the shot illegal")
+	trajectory.draw_trajectory(CombatRules.get_shot_origin(attacker, grid), CombatRules.get_shot_destination(target, grid), full_cover)
+	check(trajectory.mesh_instance.mesh != null and trajectory.last_reason == "Blocked", "Debug trajectory draws even when a shot is illegal")
+	check(trajectory.last_origin.is_equal_approx(CombatRules.get_shot_origin(attacker, grid)), "Debug trajectory shares the combat-rule origin")
+	check(trajectory.blocker_marker.mesh != null, "Blocked shots highlight the responsible LOS cell")
+	check(trajectory.last_blocking_cell.grid_position == Vector3i(16, 0, 8), "LOS highlight reports the blocking cell coordinate")
 
 	place(attacker, Vector3i(14, 0, 11), grid)
 	place(target, Vector3i(18, 0, 11), grid)
 	var wall_edge = battle.evaluate_attack(attacker, target)
 	check(wall_edge.is_legal and wall_edge.hit_chance == 100, "A shot past the wall edge remains legal")
+	trajectory.clear()
+	check(trajectory.mesh_instance.mesh == null, "Debug trajectory can be cleared with attack mode")
+	check(trajectory.blocker_marker.mesh == null and trajectory.last_blocking_cell == null, "Clearing the shot also clears its blocker highlight")
 
 	attacker.stats.current_ap = attacker.stats.max_ap
 	small_block.blocks_line_of_sight = false

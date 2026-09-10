@@ -48,9 +48,13 @@ static func has_line_of_sight_to_position(attacker: TacticalUnit, destination: V
 	return get_blocking_cell(origin, target, grid) == null
 
 static func get_blocking_cell_between_units(attacker: TacticalUnit, target: TacticalUnit, grid: GridManager) -> MapCellData:
-	var origin = grid.grid_to_world(grid.get_unit_grid(attacker)) + Vector3.UP * attacker.standing_height
-	var destination = grid.grid_to_world(grid.get_unit_grid(target)) + Vector3.UP * target.standing_height
-	return get_blocking_cell(origin, destination, grid)
+	return get_blocking_cell(get_shot_origin(attacker, grid), get_shot_destination(target, grid), grid)
+
+static func get_shot_origin(attacker: TacticalUnit, grid: GridManager) -> Vector3:
+	return grid.grid_to_world(grid.get_unit_grid(attacker)) + Vector3.UP * attacker.standing_height
+
+static func get_shot_destination(target: TacticalUnit, grid: GridManager) -> Vector3:
+	return grid.grid_to_world(grid.get_unit_grid(target)) + Vector3.UP * target.standing_height
 
 static func get_directional_cover(attacker_cell: Vector3i, target_cell: Vector3i, grid: GridManager) -> MapCellData.CoverType:
 	var delta = attacker_cell - target_cell

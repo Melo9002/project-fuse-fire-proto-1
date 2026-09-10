@@ -56,6 +56,17 @@ godot_console --headless --path . --script res://tests/elevation_smoke.gd
 godot_console --headless --path . --script res://tests/vertical_traversal_smoke.gd
 godot_console --headless --path . --script res://tests/elevation_combat_smoke.gd
 godot_console --headless --path . --script res://tests/battlefield_stress_smoke.gd
+godot_console --headless --path . --script res://tests/debug_tools_smoke.gd
 ```
 
 The smoke tests load the real battle scene and check terrain data, shared player/AI action validation, movement, AP, attacks, walls, defense, enemy turns, selection UI, and defeat cleanup. Play the scene to check appearance and combat feel.
+
+## Debug tools
+
+The battle scene's `DebugTools` node exposes `Debug Tools Enabled` in the Inspector. When enabled, a small hint appears at the top right. Press **F3** or **Esc** to toggle the debug panel and pause or resume the battle; **Resume Battle** also closes it. `Show battle-data overlay` displays live round, phase, active-unit, coordinate, HP/AP, movement, range, map-cell, and occupancy data.
+
+`Manual enemy control` stops automatic enemy decisions. During each enemy activation, use the ordinary Move, Attack, and Defend buttons, then press End Turn to advance the enemy queue. `AI controls both teams` is a hands-off simulation mode and cannot be active together with manual enemy control.
+
+`Show shot trajectories` draws the exact body-center line used by combat validation while Attack mode is active and a unit is hovered. Green is a legal clear shot, amber is a legal low-cover shot, and red is illegal. Illegal trajectories remain visible through geometry to reveal where the path crosses an obstacle.
+
+When a shot is blocked, its LOS cell is covered by a translucent red marker. The battle-data overlay reports that cell's coordinate, cover type, and height. `Show AI decision explanations` displays the latest automated actor, chosen action and subject, reason, and actions it considered as alternatives.

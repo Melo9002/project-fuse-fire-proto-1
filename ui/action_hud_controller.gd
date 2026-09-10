@@ -24,6 +24,8 @@ func _ready() -> void:
 	battle_controller.attack_mode_toggled.connect(_on_attack_mode_toggled)
 	battle_controller.attack_preview_changed.connect(_on_attack_preview_changed)
 	battle_controller.action_state_changed.connect(_on_action_state_changed)
+	battle_controller.debug_enemy_control_changed.connect(_on_debug_enemy_control_changed)
+	battle_controller.debug_player_ai_changed.connect(_on_debug_player_ai_changed)
 
 	var turn_mgr = battle_controller.turn_manager
 	if turn_mgr:
@@ -76,7 +78,15 @@ func _on_attack_preview_changed(text: String) -> void:
 		attack_button.text = text if not text.is_empty() else "Cancel Attack"
 
 func _on_turn_phase_changed(new_phase: TurnManager.TurnPhase) -> void:
-	visible = (new_phase == TurnManager.TurnPhase.PLAYER_TURN)
+	visible = battle_controller.is_current_phase_manually_controlled()
+	_update_button_states()
+
+func _on_debug_enemy_control_changed(_enabled: bool) -> void:
+	visible = battle_controller.is_current_phase_manually_controlled()
+	_update_button_states()
+
+func _on_debug_player_ai_changed(_enabled: bool) -> void:
+	visible = battle_controller.is_current_phase_manually_controlled()
 	_update_button_states()
 
 func _update_button_states() -> void:

@@ -53,6 +53,21 @@ func select_player_unit(unit: TacticalUnit) -> bool:
 	_set_active_unit(unit)
 	return true
 
+func advance_automated_player(finished_unit: TacticalUnit) -> void:
+	if current_phase != TurnPhase.PLAYER_TURN or battle_result != BattleResult.ONGOING:
+		return
+	# AP exhaustion may already have selected the next unit.
+	if active_unit != finished_unit:
+		return
+	var start_index := player_units.find(finished_unit)
+	for offset in range(1, player_units.size() + 1):
+		var candidate := player_units[(start_index + offset) % player_units.size()]
+		if is_instance_valid(candidate) and candidate.stats and not candidate.stats.is_defeated \
+			and candidate.stats.current_ap > 0:
+			_set_active_unit(candidate)
+			return
+	_start_enemy_turn_phase()
+
 func can_unit_act(unit: TacticalUnit) -> bool:
 	if battle_result != BattleResult.ONGOING or active_unit != unit or is_any_unit_moving():
 		return false

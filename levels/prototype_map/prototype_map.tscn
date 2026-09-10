@@ -22,6 +22,8 @@
 [ext_resource type="Script" path="res://systems/grid/elevated_surface.gd" id="23_surface"]
 [ext_resource type="Script" path="res://systems/grid/traversal_link.gd" id="24_link"]
 [ext_resource type="Script" path="res://systems/grid/elevation_path.gd" id="25_elevation_path"]
+[ext_resource type="Script" path="res://ui/debug_tools.gd" id="26_debug_tools"]
+[ext_resource type="Script" path="res://visualizers/shot_trajectory_visualizer.gd" id="27_shot_trajectory"]
 
 [sub_resource type="Environment" id="Environment_8x357"]
 
@@ -73,13 +75,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.72652817, -1.000001, -0.05
 script = ExtResource("1_822c8")
 camera = NodePath("../../CameraRig/Camera3D")
 
-[node name="BattleController" type="Node3D" parent="Systems" unique_id=1810984402 node_paths=PackedStringArray("mouse_raycaster", "grid_cursor", "path_visualizer", "cover_visualizer", "grid_manager", "turn_manager")]
+[node name="BattleController" type="Node3D" parent="Systems" unique_id=1810984402 node_paths=PackedStringArray("mouse_raycaster", "grid_cursor", "path_visualizer", "cover_visualizer", "shot_trajectory_visualizer", "grid_manager", "turn_manager")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.72652817, -1.000001, -0.05766487)
 script = ExtResource("3_fg2v6")
 mouse_raycaster = NodePath("../MouseRaycaster")
 grid_cursor = NodePath("../../Visualizers/GridCursor")
 path_visualizer = NodePath("../../Visualizers/PathVisualizer")
 cover_visualizer = NodePath("../../Visualizers/CoverVisualizer")
+shot_trajectory_visualizer = NodePath("../../Visualizers/ShotTrajectoryVisualizer")
 grid_manager = NodePath("../GridManager")
 turn_manager = NodePath("../TurnManager")
 
@@ -615,14 +618,19 @@ grid_manager = NodePath("../../Systems/GridManager")
 script = ExtResource("22_cover")
 grid_manager = NodePath("../../Systems/GridManager")
 
-[node name="UnitSelectionVisualizer" type="Node" parent="Visualizers" node_paths=PackedStringArray("turn_manager")]
+[node name="ShotTrajectoryVisualizer" type="Node3D" parent="Visualizers" node_paths=PackedStringArray("grid_manager")]
+script = ExtResource("27_shot_trajectory")
+grid_manager = NodePath("../../Systems/GridManager")
+
+[node name="UnitSelectionVisualizer" type="Node" parent="Visualizers" node_paths=PackedStringArray("turn_manager", "battle_controller")]
 script = ExtResource("20_selection")
 turn_manager = NodePath("../../Systems/TurnManager")
+battle_controller = NodePath("../../Systems/BattleController")
 
 [node name="BattleUI" type="CanvasLayer" parent="Visualizers" unique_id=1620723361 groups=["UI_LAYER"]]
 follow_viewport_enabled = true
 
-[node name="TurnHUDController" type="Control" parent="Visualizers/BattleUI" unique_id=820213841 node_paths=PackedStringArray("turn_manager", "turn_label", "end_turn_button")]
+[node name="TurnHUDController" type="Control" parent="Visualizers/BattleUI" unique_id=820213841 node_paths=PackedStringArray("turn_manager", "battle_controller", "turn_label", "end_turn_button")]
 layout_mode = 3
 anchors_preset = 0
 offset_left = 30.0
@@ -631,6 +639,7 @@ offset_right = 30.0
 offset_bottom = 34.0
 script = ExtResource("9_6xxhk")
 turn_manager = NodePath("../../../Systems/TurnManager")
+battle_controller = NodePath("../../../Systems/BattleController")
 turn_label = NodePath("VBoxContainer/TurnLabel")
 end_turn_button = NodePath("VBoxContainer/EndTurnButton")
 
@@ -725,3 +734,16 @@ theme_override_constants/margin_bottom = 4
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
+
+[node name="DebugTools" type="Control" parent="Visualizers/BattleUI" node_paths=PackedStringArray("battle_controller", "turn_manager", "grid_manager")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("26_debug_tools")
+battle_controller = NodePath("../../../Systems/BattleController")
+turn_manager = NodePath("../../../Systems/TurnManager")
+grid_manager = NodePath("../../../Systems/GridManager")

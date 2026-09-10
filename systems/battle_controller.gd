@@ -7,12 +7,16 @@ signal attack_preview_changed(text: String)
 signal attack_resolved(attacker: TacticalUnit, target: TacticalUnit, did_hit: bool, hit_chance: int)
 signal action_state_changed(is_busy: bool)
 signal units_registered(player_units: Array[TacticalUnit])
+signal debug_enemy_control_changed(enabled: bool)
+signal debug_player_ai_changed(enabled: bool)
+signal ai_decision_recorded(record: Dictionary)
 
 @export var tactical_unit: TacticalUnit
 @export var mouse_raycaster: MouseRaycaster
 @export var grid_cursor: GridCursor
 @export var path_visualizer: PathVisualizer
 @export var cover_visualizer: CoverVisualizer
+@export var shot_trajectory_visualizer: ShotTrajectoryVisualizer
 @export var grid_manager: GridManager
 @export var turn_manager: TurnManager
 @export var debug_shots: bool = false
@@ -23,6 +27,8 @@ var pathfinder := Pathfinder.new()
 var current_movement_zone: Array[Vector3i] = []
 var current_attack_zone: Array[Vector3i] = []
 var _last_attack_preview := ""
+var debug_enemy_control: bool = false
+var debug_player_ai: bool = false
 var is_action_in_progress: bool = false:
 	set(value):
 		if is_action_in_progress != value:
@@ -45,6 +51,8 @@ var is_attack_mode_active: bool = false:
 			attack_mode_toggled.emit(is_attack_mode_active)
 			if not is_attack_mode_active:
 				path_visualizer.clear_range_zone()
+				if shot_trajectory_visualizer:
+					shot_trajectory_visualizer.clear()
 
 func _ready() -> void:
 	if not mouse_raycaster or not grid_manager or not grid_manager.map_floor or not path_visualizer or not cover_visualizer or not turn_manager or not grid_cursor:
@@ -71,14 +79,14 @@ func initialize_battle() -> void:
 	turn_manager.start_battle()
 
 func toggle_move_mode() -> void:
-	if turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN and not is_action_in_progress:
+	if is_current_phase_manually_controlled() and not is_action_in_progress:
 		is_move_mode_active = not is_move_mode_active
 		if is_move_mode_active:
 			is_attack_mode_active = false
 			update_unit_movement_zone()
 
 func toggle_attack_mode() -> void:
-	if turn_manager.current_phase != TurnManager.TurnPhase.PLAYER_TURN or is_action_in_progress:
+	if not is_current_phase_manually_controlled() or is_action_in_progress:
 		return
 	if not tactical_unit or not tactical_unit.stats or tactical_unit.stats.current_ap < UNIFORM_AP_COST:
 		return
@@ -93,7 +101,7 @@ func toggle_attack_mode() -> void:
 	update_attack_range()
 
 func _process(_delta: float) -> void:
-	if not turn_manager or turn_manager.current_phase != TurnManager.TurnPhase.PLAYER_TURN:
+	if not turn_manager or not is_current_phase_manually_controlled():
 		return
 
 	var floor_hit = mouse_raycaster.get_floor_raycast_result() if mouse_raycaster else {}
@@ -118,11 +126,21 @@ func _update_movement_preview(floor_hit: Dictionary) -> void:
 
 func _update_attack_preview() -> void:
 	var preview = ""
+	var trajectory_drawn := false
 	if is_attack_mode_active and is_instance_valid(tactical_unit):
 		var hovered = mouse_raycaster.get_unit_under_mouse()
 		if is_instance_valid(hovered) and hovered != tactical_unit:
 			var evaluation = evaluate_attack(tactical_unit, hovered)
 			preview = "%d%% HIT" % evaluation.hit_chance if evaluation.is_legal else evaluation.reason.to_upper()
+			if shot_trajectory_visualizer:
+				shot_trajectory_visualizer.draw_trajectory(
+					CombatRules.get_shot_origin(tactical_unit, grid_manager),
+					CombatRules.get_shot_destination(hovered, grid_manager),
+					evaluation
+				)
+				trajectory_drawn = true
+	if not trajectory_drawn and shot_trajectory_visualizer:
+		shot_trajectory_visualizer.clear()
 	if preview != _last_attack_preview:
 		_last_attack_preview = preview
 		attack_preview_changed.emit(preview)
@@ -135,7 +153,7 @@ func _on_unit_clicked(unit: TacticalUnit) -> void:
 		try_attack(tactical_unit, unit)
 		return
 
-	if turn_manager.select_player_unit(unit):
+	if not debug_player_ai and turn_manager.select_player_unit(unit):
 		is_move_mode_active = false
 		is_attack_mode_active = false
 
@@ -154,7 +172,7 @@ func _on_floor_clicked(raw_position: Vector3) -> void:
 	await try_move(tactical_unit, clicked_grid)
 
 func _on_turn_phase_changed(new_phase: TurnManager.TurnPhase) -> void:
-	var is_player_control = (new_phase == TurnManager.TurnPhase.PLAYER_TURN)
+	var is_player_control = is_current_phase_manually_controlled()
 	grid_cursor.visible = is_player_control
 	if not is_player_control:
 		is_move_mode_active = false
@@ -218,6 +236,39 @@ func can_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:
 
 func evaluate_attack(attacker: TacticalUnit, target: TacticalUnit) -> CombatRules.AttackEvaluation:
 	return CombatRules.evaluate_attack(attacker, target, grid_manager, get_world_3d())
+
+func set_debug_enemy_control(enabled: bool) -> void:
+	if debug_enemy_control == enabled:
+		return
+	debug_enemy_control = enabled
+	is_move_mode_active = false
+	is_attack_mode_active = false
+	debug_enemy_control_changed.emit(enabled)
+	_on_turn_phase_changed(turn_manager.current_phase)
+
+func set_debug_player_ai(enabled: bool) -> void:
+	if debug_player_ai == enabled:
+		return
+	debug_player_ai = enabled
+	is_move_mode_active = false
+	is_attack_mode_active = false
+	debug_player_ai_changed.emit(enabled)
+	_on_turn_phase_changed(turn_manager.current_phase)
+
+func is_current_phase_manually_controlled() -> bool:
+	if not turn_manager:
+		return false
+	return (not debug_player_ai and turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN) \
+		or (debug_enemy_control and turn_manager.current_phase == TurnManager.TurnPhase.ENEMY_TURN)
+
+func record_ai_decision(actor: TacticalUnit, action: String, subject: String, reason: String, alternatives: String) -> void:
+	ai_decision_recorded.emit({
+		"actor": actor.name if is_instance_valid(actor) else "Unknown",
+		"action": action,
+		"subject": subject,
+		"reason": reason,
+		"alternatives": alternatives,
+	})
 
 func try_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:
 	if is_action_in_progress or not turn_manager.can_unit_act(attacker):

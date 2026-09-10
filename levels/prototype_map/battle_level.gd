@@ -38,14 +38,14 @@ func _spawn_team(count: int, zone: SpawnZone, parent: Node3D, add_ai: bool) -> v
 		unit.attack_range = test_battle_attack_range
 		parent.add_child(unit)
 		unit.global_transform = spawn_transforms[index]
+		var ai = AIController.new()
+		ai.name = "AIController%d" % (index + 1)
+		ai.unit = unit
+		ai.turn_manager = turn_manager
+		ai.battle_controller = battle_controller
+		parent.add_child(ai)
 
 		if add_ai:
 			turn_manager.enemy_units.append(unit)
-			var ai = AIController.new()
-			ai.name = "AIController%d" % (index + 1)
-			ai.unit = unit
-			ai.turn_manager = turn_manager
-			ai.battle_controller = battle_controller
-			parent.add_child(ai)
 		else:
 			turn_manager.player_units.append(unit)

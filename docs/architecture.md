@@ -46,6 +46,8 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 | `UnitPortraitBar` | Mirrors the friendly roster and synchronizes selection | Changing roster-level battle UI |
 | `UnitPortrait` | Displays one unit's HP, AP, and UI state | Changing the contents of a portrait card |
 | `UnitSelectionVisualizer` | Applies the world outline to the selected friendly | Changing selection feedback in the battlefield |
+| `DebugTools` | Pauses the battle, displays runtime data, and changes test control ownership | Adding developer-only battle inspection tools |
+| `ShotTrajectoryVisualizer` | Draws the combat validator's exact shot segment | Diagnosing range, cover, and LOS decisions |
 
 ## Match setup and spawning
 
@@ -109,6 +111,8 @@ End Turn starts the enemy phase. Every action request passes through `BattleCont
 The current enemy AI repeats a small priority list while it has AP: attack the legal target with the lowest HP; otherwise move once toward the nearest living player; otherwise Defend and finish its activation. Attack legality, hit chance, movement budget, occupancy, AP cost, damage, and defense all come from the same rules and action classes used by player input. The test level also assigns its extended attack range to both teams, so enemies take legal ranged shots instead of approaching to the unit scene's shorter default range. The AI chooses an intention; it does not implement a second version of combat.
 
 Difficulty should later adjust decision policy, such as target scores, position scores, planning depth, or intentional mistakes. It should not bypass action validation or secretly use different movement and combat rules. After the final enemy activation, a new player round begins. AP resets and defense expires at the start of that team's phase. Running out of player AP does **not** automatically end the phase. Removing the final enemy or player ends the battle and displays Victory or Defeat.
+
+The test scene's `DebugTools` node owns developer-only control overrides. Its Inspector switch can remove the tools from play. F3 opens a pause-safe panel, the optional overlay reads battle state without owning it, manual enemy control redirects the active enemy to the normal action UI, and AI-versus-AI mode attaches the same faction-neutral decision policy to player activations. The shot-trajectory option draws the same body-center segment used by `CombatRules`, including illegal attempts, so its visualization cannot drift from LOS geometry. Blocked shots mark the responsible `MapCellData`, while AI controllers publish structured decision records that the debug UI may display without participating in those decisions. These modes change who chooses actions; all requests still pass through ordinary turn and action validation.
 
 ## Terrain and units are different data
 
