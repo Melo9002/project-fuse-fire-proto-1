@@ -53,6 +53,17 @@ func select_player_unit(unit: TacticalUnit) -> bool:
 	_set_active_unit(unit)
 	return true
 
+func can_unit_act(unit: TacticalUnit) -> bool:
+	if battle_result != BattleResult.ONGOING or active_unit != unit or is_any_unit_moving():
+		return false
+	if not is_instance_valid(unit) or not unit.stats or unit.stats.is_defeated:
+		return false
+	if current_phase == TurnPhase.PLAYER_TURN:
+		return player_units.has(unit)
+	if current_phase == TurnPhase.ENEMY_TURN:
+		return enemy_units.has(unit)
+	return false
+
 func remove_unit(unit: TacticalUnit) -> void:
 	player_units.erase(unit)
 	enemy_units.erase(unit)

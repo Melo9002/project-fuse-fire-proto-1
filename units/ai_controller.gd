@@ -40,15 +40,16 @@ func _execute_turn() -> void:
 	var has_moved := false
 	while is_instance_valid(unit) and unit.stats.current_ap > 0 \
 		and turn_manager.battle_result == TurnManager.BattleResult.ONGOING:
-		var target_player = _find_nearest_player()
-		if not target_player:
-			break
-		if battle_controller.try_attack(unit, target_player):
+		var attack_target = _find_attack_target()
+		if attack_target and battle_controller.try_attack(unit, attack_target):
 			await get_tree().create_timer(0.25).timeout
 			continue
-		if has_moved or not await _move_toward(target_player):
-			break
-		has_moved = true
+		var movement_target = _find_nearest_player()
+		if not has_moved and movement_target and await _move_toward(movement_target):
+			has_moved = true
+			continue
+		battle_controller.try_defend(unit)
+		break
 
 	turn_manager.end_current_turn()
 
@@ -59,17 +60,28 @@ func _move_toward(target: TacticalUnit) -> bool:
 	if path.size() <= 1:
 		return false
 
-	# Walk toward the target, but choose an unoccupied stopping cell.
+	# Choose the farthest legal stop along the route.
 	path.remove_at(path.size() - 1)
-	var max_steps = min(unit.stats.speed, path.size() - 1)
-	var destination_index = max_steps
+	var reachable = battle_controller.pathfinder.get_reachable_cells(start_cell, unit.stats.speed)
+	var destination_index = path.size() - 1
 	while destination_index > 0:
 		var candidate = battle_controller.world_to_grid(path[destination_index])
-		if battle_controller.grid_manager.can_unit_occupy_cell(unit, candidate):
-			var movement_path: PackedVector3Array = path.slice(0, destination_index + 1)
-			return await battle_controller.try_move(unit, candidate, movement_path)
+		if reachable.has(candidate) and battle_controller.grid_manager.can_unit_occupy_cell(unit, candidate):
+			if await battle_controller.try_move(unit, candidate):
+				return true
 		destination_index -= 1
 	return false
+
+func _find_attack_target() -> TacticalUnit:
+	var best_target: TacticalUnit
+	var lowest_hp := INF
+	for candidate in turn_manager.player_units:
+		if not is_instance_valid(candidate) or not candidate.stats or candidate.stats.is_defeated:
+			continue
+		if battle_controller.evaluate_attack(unit, candidate).is_legal and candidate.stats.current_hp < lowest_hp:
+			best_target = candidate
+			lowest_hp = candidate.stats.current_hp
+	return best_target
 
 func _find_nearest_player() -> TacticalUnit:
 	var nearest: TacticalUnit

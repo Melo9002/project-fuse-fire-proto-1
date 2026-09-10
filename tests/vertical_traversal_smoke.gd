@@ -27,12 +27,12 @@ func _run() -> void:
 	grid.update_unit_position(unit, grid.get_unit_grid(unit), bottom)
 	var ladder_path = battle.pathfinder.calculate_3d_path(bottom, top)
 	check(ladder_path.size() == 2, "The ladder is a direct explicit traversal link")
-	check(await battle.try_move(unit, top, ladder_path), "A unit can climb the ladder through the normal Move action")
+	check(await battle.try_move(unit, top), "A unit can climb the ladder through the normal Move action")
 	check(grid.get_unit_grid(unit) == top and is_equal_approx(unit.global_position.y, 3.0), "The unit arrives on the platform's logical and world elevation")
 
 	var platform_path = battle.pathfinder.calculate_3d_path(top, platform_destination)
 	check(platform_path.size() > 1, "Elevated platform cells use ordinary horizontal pathfinding")
-	check(await battle.try_move(unit, platform_destination, platform_path), "A unit can move normally after reaching the platform")
+	check(await battle.try_move(unit, platform_destination), "A unit can move normally after reaching the platform")
 	check(grid.get_unit_grid(unit) == platform_destination, "Platform movement updates elevated occupancy")
 	var upper_cell := Vector3i(platform_destination.x, 5, platform_destination.z)
 	var upper_unit: TacticalUnit = level.turn_manager.enemy_units[0]

@@ -21,6 +21,10 @@ func _run() -> void:
 	var grid = battle.grid_manager
 	check(turns.player_units.size() == 5 and turns.enemy_units.size() == 5, "Stress battle starts with 5v5 rosters")
 	check(grid.occupancy_map.size() == 10, "Every stress-test unit has unique occupancy")
+	check(turns.player_units[0].attack_range == turns.enemy_units[0].attack_range, "Both teams use the same test-battle attack range")
+	var enemy_start_cells: Dictionary = {}
+	for enemy in turns.enemy_units:
+		enemy_start_cells[enemy] = grid.get_unit_grid(enemy)
 
 	for player in turns.player_units:
 		for enemy in turns.enemy_units:
@@ -34,6 +38,9 @@ func _run() -> void:
 
 	check(turns.current_phase == TurnManager.TurnPhase.PLAYER_TURN and turns.current_round == 2, "All five AI units finish the expanded-map turn")
 	check(grid.occupancy_map.size() == 10, "AI movement preserves unique 5v5 occupancy")
+	for enemy in turns.enemy_units:
+		check(grid.get_unit_grid(enemy) != enemy_start_cells[enemy], "%s moves through the shared movement gateway" % enemy.name)
+		check(enemy.stats.current_ap == 0 and enemy.stats.is_defending, "%s spends its remaining AP on shared Defend" % enemy.name)
 	for unit in turns.player_units + turns.enemy_units:
 		check(not unit.is_moving, "%s finishes movement before the next round" % unit.name)
 

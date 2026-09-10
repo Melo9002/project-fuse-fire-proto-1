@@ -58,4 +58,4 @@ godot_console --headless --path . --script res://tests/elevation_combat_smoke.gd
 godot_console --headless --path . --script res://tests/battlefield_stress_smoke.gd
 ```
 
-The smoke tests load the real battle scene and check terrain data, movement, AP, attacks, walls, defense, enemy turns, selection UI, and defeat cleanup. Play the scene to check appearance and combat feel.
+The smoke tests load the real battle scene and check terrain data, shared player/AI action validation, movement, AP, attacks, walls, defense, enemy turns, selection UI, and defeat cleanup. Play the scene to check appearance and combat feel.

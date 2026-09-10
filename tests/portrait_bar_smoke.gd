@@ -42,8 +42,7 @@ func _run() -> void:
 	var grid = level.get_node("Systems/GridManager") as GridManager
 	var start_cell = grid.world_to_grid(moving_unit.global_position)
 	var destination = start_cell + Vector3i(1, 0, 0)
-	var path = battle.pathfinder.calculate_3d_path(start_cell, destination)
-	battle.try_move(moving_unit, destination, path)
+	battle.try_move(moving_unit, destination)
 	check(turns.active_unit == moving_unit, "Final movement keeps selection until arrival")
 	await moving_unit.movement_finished
 	await process_frame

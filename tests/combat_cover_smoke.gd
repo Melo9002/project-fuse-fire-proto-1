@@ -23,8 +23,8 @@ func _run() -> void:
 	var grid = battle.grid_manager
 	var attacker = battle.turn_manager.player_units[0]
 	var target = battle.turn_manager.enemy_units[0]
-	check(attacker.attack_range == 8, "Friendly units use the extended test range")
-	check(target.attack_range == 3, "Enemy attack range remains unchanged")
+	check(attacker.attack_range == 5, "Friendly units use the configured test range")
+	check(target.attack_range == 5, "Enemies use the same configured test range")
 	var mismatches := 0
 	var small_block = grid.get_cell_data(Vector3i(18, 0, 14))
 	place(attacker, Vector3i(17, 0, 14), grid)

@@ -151,7 +151,7 @@ func _on_floor_clicked(raw_position: Vector3) -> void:
 	if path.is_empty():
 		return
 
-	await try_move(tactical_unit, clicked_grid, path)
+	await try_move(tactical_unit, clicked_grid)
 
 func _on_turn_phase_changed(new_phase: TurnManager.TurnPhase) -> void:
 	var is_player_control = (new_phase == TurnManager.TurnPhase.PLAYER_TURN)
@@ -220,7 +220,7 @@ func evaluate_attack(attacker: TacticalUnit, target: TacticalUnit) -> CombatRule
 	return CombatRules.evaluate_attack(attacker, target, grid_manager, get_world_3d())
 
 func try_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:
-	if is_action_in_progress or turn_manager.battle_result != TurnManager.BattleResult.ONGOING:
+	if is_action_in_progress or not turn_manager.can_unit_act(attacker):
 		return false
 	var evaluation = evaluate_attack(attacker, target)
 	if debug_shots:
@@ -241,7 +241,7 @@ func try_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:
 	return true
 
 func try_defend(unit: TacticalUnit) -> bool:
-	if is_action_in_progress or turn_manager.battle_result != TurnManager.BattleResult.ONGOING:
+	if is_action_in_progress or not turn_manager.can_unit_act(unit):
 		return false
 	var action = DefendAction.new(unit, UNIFORM_AP_COST)
 	if not action.execute():
@@ -250,8 +250,15 @@ func try_defend(unit: TacticalUnit) -> bool:
 	is_attack_mode_active = false
 	return true
 
-func try_move(unit: TacticalUnit, target_cell: Vector3i, path: PackedVector3Array) -> bool:
-	if is_action_in_progress or turn_manager.battle_result != TurnManager.BattleResult.ONGOING:
+func try_move(unit: TacticalUnit, target_cell: Vector3i) -> bool:
+	if is_action_in_progress or not turn_manager.can_unit_act(unit):
+		return false
+	var movement_budget = unit.stats.speed if unit.stats else 0
+	var start_cell = grid_manager.get_unit_grid(unit)
+	if not pathfinder.get_reachable_cells(start_cell, movement_budget).has(target_cell):
+		return false
+	var path = pathfinder.calculate_3d_path(start_cell, target_cell)
+	if path.is_empty():
 		return false
 	var action = MoveAction.new(unit, target_cell, _build_movement_path(unit, path), grid_manager, UNIFORM_AP_COST)
 	if not action.execute():

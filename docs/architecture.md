@@ -38,7 +38,7 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 | `UnitAction` subclasses | Resource validation and action effects | Changing costs or effects |
 | `UnitStats` | HP, AP, defense, defeat signals | Changing health or resource rules |
 | `TacticalUnit` | Path animation, defeat relay, health-display creation | Changing unit movement or presentation |
-| `AIController` | Chooses a nearby player and attacks or approaches | Changing enemy decisions |
+| `AIController` | Chooses among legal attacks, movement, and defense | Changing enemy priorities or difficulty |
 | UI and visualizers | Display state and forward input | Changing feedback and presentation |
 | `TacticalCamera` | Bounded pan, zoom, and rotation | Changing how the battlefield is viewed |
 | `BattleLevel` | Builds selected teams before starting combat | Changing how a match is assembled |
@@ -82,7 +82,7 @@ Movement distinguishes crossing a cell from ending on it. Floor cells cost one m
 1. The Move button calls `BattleController.toggle_move_mode()`.
 2. The controller asks `Pathfinder` for cells within the selected unit's budget and filters occupied destinations through `GridManager`.
 3. `PathVisualizer` draws yellow cells. Hovering requests an A* path and draws it in blue.
-4. `MouseRaycaster` turns a click into a floor hit. The controller checks the destination and creates `MoveAction`.
+4. `MouseRaycaster` turns a click into a floor hit. The controller verifies the active turn, recomputes the reachable set and path from map data, then creates `MoveAction`.
 5. The action spends AP, reserves the destination, and gives the path to `TacticalUnit`.
 6. The unit advances each frame and emits `movement_finished` on arrival. The action mode has already returned to neutral.
 
@@ -104,7 +104,11 @@ The 32×24 test battlefield is a systems laboratory. Opposing 5-unit spawn zones
 
 At zero HP, stats announce defeat. The unit relays the signal, and the battle removes it from occupancy and the roster before freeing it.
 
-End Turn starts the enemy phase. Each AI uses the same Move and Attack gateways as the player, then tells `TurnManager` to advance. After the final enemy, a new player round begins. AP resets and defense expires at the start of that team's phase. Running out of player AP does **not** automatically end the phase. Removing the final enemy or player ends the battle and displays Victory or Defeat.
+End Turn starts the enemy phase. Every action request passes through `BattleController`, which asks `TurnManager` whether that unit is alive, active, and part of the current faction roster. Rejected actions preserve AP. Move requests also rebuild their path from authoritative map data, so neither UI nor AI can supply a shortcut through blocked terrain.
+
+The current enemy AI repeats a small priority list while it has AP: attack the legal target with the lowest HP; otherwise move once toward the nearest living player; otherwise Defend and finish its activation. Attack legality, hit chance, movement budget, occupancy, AP cost, damage, and defense all come from the same rules and action classes used by player input. The test level also assigns its extended attack range to both teams, so enemies take legal ranged shots instead of approaching to the unit scene's shorter default range. The AI chooses an intention; it does not implement a second version of combat.
+
+Difficulty should later adjust decision policy, such as target scores, position scores, planning depth, or intentional mistakes. It should not bypass action validation or secretly use different movement and combat rules. After the final enemy activation, a new player round begins. AP resets and defense expires at the start of that team's phase. Running out of player AP does **not** automatically end the phase. Removing the final enemy or player ends the battle and displays Victory or Defeat.
 
 ## Terrain and units are different data
 

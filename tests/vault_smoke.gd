@@ -39,7 +39,7 @@ func _run() -> void:
 	var animated_path = battle._build_movement_path(unit, path)
 	check(is_equal_approx(animated_path[1].y, 2.0), "Vault waypoint rises over one-meter cover")
 	check(is_equal_approx(animated_path[2].y, 1.0), "Path returns to standing height")
-	check(await battle.try_move(unit, destination, path), "Move action can vault low cover")
+	check(await battle.try_move(unit, destination), "Move action can vault low cover")
 	check(unit.stats.current_ap == 1, "Vault move costs one AP")
 	check(grid.world_to_grid(unit.global_position) == destination, "Unit lands beyond low cover")
 
