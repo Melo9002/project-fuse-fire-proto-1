@@ -17,13 +17,14 @@ func _run() -> void:
 
 	var grid: GridManager = level.get_node("Systems/GridManager")
 	var wall_cell = grid.world_to_grid(Vector3(2.5, 0.0, 2.5))
-	var low_cover_cell = grid.world_to_grid(Vector3(-5.0, 0.0, 2.5))
-	var open_cell = grid.world_to_grid(Vector3(0.5, 0.0, 0.5))
+	var low_cover_cell = grid.world_to_grid(Vector3(-6.5, 0.0, 4.5))
+	var player: TacticalUnit = level.get_node("Systems/TurnManager").player_units[0]
+	var open_cell = grid.world_to_grid(player.global_position)
 	var wall_data = grid.get_cell_data(wall_cell)
 	var low_cover_data = grid.get_cell_data(low_cover_cell)
 	var open_data = grid.get_cell_data(open_cell)
 
-	check(grid.map_data.cells.size() == 400, "Map data contains every 20 x 20 cell")
+	check(grid.map_data.cells.size() == 492, "Map data contains ground and elevated platform cells")
 	check(wall_data != null and wall_data.walkable and not wall_data.can_stop, "Low cover can be crossed but not occupied")
 	check(wall_data != null and wall_data.cover_type == MapCellData.CoverType.LOW, "Small block exposes low cover")
 	check(wall_data != null and not wall_data.blocks_line_of_sight, "Small block permits shots")

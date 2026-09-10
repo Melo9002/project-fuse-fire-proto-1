@@ -26,8 +26,8 @@ static func evaluate_attack(attacker: TacticalUnit, target: TacticalUnit, grid: 
 	if not FactionRules.are_hostile(attacker.faction, target.faction):
 		return AttackEvaluation.new(false, 0, MapCellData.CoverType.NONE, "Not hostile")
 
-	var attacker_grid = grid.world_to_grid(attacker.global_position)
-	var target_grid = grid.world_to_grid(target.global_position)
+	var attacker_grid = grid.get_unit_grid(attacker)
+	var target_grid = grid.get_unit_grid(target)
 	var grid_distance = absi(attacker_grid.x - target_grid.x) + absi(attacker_grid.y - target_grid.y) + absi(attacker_grid.z - target_grid.z)
 	if grid_distance > attacker.attack_range:
 		return AttackEvaluation.new(false, 0, MapCellData.CoverType.NONE, "Out of range")
@@ -69,7 +69,7 @@ static func get_blocking_cell(origin: Vector3, destination: Vector3, grid: GridM
 	var crossed_x := 0
 	var crossed_z := 0
 	# Compare boundary crossings exactly; touching a corner alone does not block.
-	while cell != target:
+	while cell.x != target.x or cell.z != target.z:
 		var next_x = (2 * crossed_x + 1) * dz
 		var next_z = (2 * crossed_z + 1) * dx
 		if next_x <= next_z:
@@ -78,7 +78,7 @@ static func get_blocking_cell(origin: Vector3, destination: Vector3, grid: GridM
 		if next_z <= next_x:
 			cell.z += step_z
 			crossed_z += 1
-		if cell == target:
+		if cell.x == target.x and cell.z == target.z:
 			break
 		var data = grid.get_cell_data(cell)
 		if data and data.blocks_line_of_sight:

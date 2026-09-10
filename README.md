@@ -35,6 +35,8 @@ Start with [the architecture guide](docs/architecture.md): ownership, the path f
 
 The prototype has weighted A* paths, low-cover vaulting, directional cover, full-cover line of sight, movement previews, selection, AP, shared actions, faction relationships, attacks, defense, enemy turns, battle results, a tactical camera, and health displays. It does not yet have elevated terrain, procedural maps, or a finished tactical ruleset.
 
+The 24×20 test battlefield is a systems lab: separated 5v5 spawn zones, open firing lanes, staggered low cover, full-cover walls, a narrow central crossing, and longer north/south routes.
+
 Friendly units currently have an 8-tile attack range to make cover testing easier. Enemy units retain the prototype's 3-tile range.
 
 ## Verify changes
@@ -49,6 +51,7 @@ godot_console --headless --path . --script res://tests/portrait_bar_smoke.gd
 godot_console --headless --path . --script res://tests/map_data_smoke.gd
 godot_console --headless --path . --script res://tests/combat_cover_smoke.gd
 godot_console --headless --path . --script res://tests/vault_smoke.gd
+godot_console --headless --path . --script res://tests/battlefield_layout_smoke.gd
 ```
 
 The smoke tests load the real battle scene and check terrain data, movement, AP, attacks, walls, defense, enemy turns, selection UI, and defeat cleanup. Play the scene to check appearance and combat feel.

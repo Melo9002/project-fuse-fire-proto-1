@@ -53,8 +53,8 @@ func _execute_turn() -> void:
 	turn_manager.end_current_turn()
 
 func _move_toward(target: TacticalUnit) -> bool:
-	var start_cell = battle_controller.world_to_grid(unit.global_position)
-	var target_cell = battle_controller.world_to_grid(target.global_position)
+	var start_cell = battle_controller.grid_manager.get_unit_grid(unit)
+	var target_cell = battle_controller.grid_manager.get_unit_grid(target)
 	var path = battle_controller.pathfinder.calculate_3d_path(start_cell, target_cell)
 	if path.size() <= 1:
 		return false

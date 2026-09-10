@@ -21,7 +21,7 @@ func _run() -> void:
 	var enemy: TacticalUnit = turns.enemy_units[0]
 	var camera_rig: TacticalCamera = level.get_node("CameraRig")
 	check(turns.current_phase == TurnManager.TurnPhase.PLAYER_TURN, "Battle starts after map scan")
-	check(battle.pathfinder.grid_to_id_map.size() == 400, "20 x 20 terrain is built")
+	check(battle.pathfinder.grid_to_id_map.size() == 492, "Ground and platform terrain are built")
 	var wall = grid.world_to_grid(Vector3(2.5, 0, 2.5))
 	check(not battle.pathfinder.astar.is_point_disabled(battle.pathfinder.grid_to_id_map[wall]), "Low cover remains connected for vault paths")
 	check(not grid.get_cell_data(wall).can_stop, "Units cannot stop on low cover")
@@ -34,7 +34,7 @@ func _run() -> void:
 	check(not FactionRules.are_hostile(TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.NEUTRAL), "Neutral units are not hostile")
 	camera_rig.global_position = Vector3(100, 0, -100)
 	camera_rig._clamp_to_map()
-	check(camera_rig.global_position.x == 12.0 and camera_rig.global_position.z == -12.0, "Camera pan stays near map bounds")
+	check(camera_rig.global_position.x == 14.0 and camera_rig.global_position.z == -12.0, "Camera pan follows the larger map bounds")
 	camera_rig._set_zoom(100.0)
 	check(camera_rig.camera.position.z == camera_rig.max_zoom, "Camera zoom stays within its maximum")
 

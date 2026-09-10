@@ -14,6 +14,7 @@ signal defeated(unit: TacticalUnit)
 @export var unit_hud_scene: PackedScene = preload("res://ui/unit_world_bar.tscn")
 
 var current_path: PackedVector3Array = PackedVector3Array()
+var grid_position: Vector3i = Vector3i.ZERO
 var current_waypoint_idx: int = 0
 var is_moving: bool = false
 
@@ -39,6 +40,7 @@ func _process(delta: float) -> void:
 	global_position = global_position.move_toward(target_waypoint, movement_speed * delta)
 
 	if global_position.distance_to(target_waypoint) < 0.01:
+		global_position = target_waypoint
 		current_waypoint_idx += 1
 
 func move_along_path(path: PackedVector3Array) -> void:

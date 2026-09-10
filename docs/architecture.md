@@ -28,6 +28,8 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 | `MapBuilder` | Converts authored geometry into map cells and paths | Changing how a scene or future generator supplies terrain |
 | `MapData` / `MapCellData` | Terrain, elevation, cover, LOS, and traversal facts | Asking what a battlefield cell contains |
 | `TerrainFeature` | Inspector metadata for authored obstacles | Declaring cover without relying on node names or dimensions |
+| `ElevatedSurface` | Inspector metadata that produces elevated walkable cells | Authoring rooftops, platforms, or bridges |
+| `TraversalLink` | Converts an authored ladder connection into map data | Connecting terrain that normal height rules cannot join |
 | `GridManager` | Cell/world conversion, map data, and separate unit occupancy | Looking up terrain or who occupies a cell |
 | `Pathfinder` | A* routes and breadth-first movement range | Changing terrain traversal |
 | `CombatRules` | Faction, range, and line of sight | Changing legal attack targets |
@@ -64,6 +66,10 @@ Exhausted and dead portraits remain visible but cannot be selected. A dead portr
 
 `MapData` is the runtime terrain description. Every `MapCellData` record stores its coordinate, world position, elevation, walkability, cover type, physical cover height, LOS blocking flag, and movement cost. Authored maps fill it through `MapBuilder`; a procedural generator can later produce the same records without changing gameplay systems. `GridManager.occupancy_map` remains separate because a unit standing on a tile does not change its terrain.
 
+The Y component of a cell coordinate is its elevation level. `GridManager.elevation_step` converts each level into world height, and `MapData` may hold several cells in the same X/Z column. A `TacticalUnit` keeps its registered grid coordinate as logical state, so two units can occupy different floors in one column without model height confusing occupancy. Pathfinder connects horizontal neighbors whose elevation differs by at most one level; larger gaps remain disconnected until an explicit traversal link such as a ladder is supplied.
+
+An authored `ElevatedSurface` contributes regular `MapCellData` records at its declared elevation. Its solid footprint disables the ground beneath it. A `TraversalLink` contributes `TraversalLinkData` to the map and joins two specified cells in the path graph. The current northwest platform is two levels high, so it remains unreachable when its ladder link is removed. Once a unit climbs onto it, movement uses the same cells and rules as the ground.
+
 Movement distinguishes crossing a cell from ending on it. Floor cells cost one movement point and accept units. Low cover stays connected, costs two points, and cannot be a destination; the movement path raises the unit by the declared cover height while crossing it. Full cover is disconnected. Every completed Move action still costs one AP.
 
 `CoverVisualizer` draws a short edge inside each reachable destination beside cover while Move mode is active. The edge faces the obstacle, matching directional combat cover. Low and full cover use separate materials, and leaving Move mode clears both.
@@ -87,7 +93,9 @@ Line of sight reads the terrain description rather than using pathfinding or raw
 
 Flat-map LOS traverses cells exactly between tile centers. Floor previews and unit targets use identical coordinates regardless of model height. A line touching only a cell corner does not enter that cell; crossing its interior does.
 
-All three current authored obstacles are 1 m low cover, including the small central cube. Full-cover behavior is exercised with test terrain. Enable `Debug Shots` on `BattleController` to log attempted targets, legality, chance, and the blocking terrain cell when present.
+Authored obstacles declare their cover type and physical height. The current map uses bright 1 m low cover and darker 2 m full cover. Enable `Debug Shots` on `BattleController` to log attempted targets, legality, chance, and the blocking terrain cell when present.
+
+The test battlefield is 24×20. Friendly and enemy spawn zones sit on opposite sides. Staggered low cover supports vaulting and directional protection; two central full-cover wall segments leave north, center, and south routes. A northwest platform and explicit ladder provide the first vertical route.
 
 At zero HP, stats announce defeat. The unit relays the signal, and the battle removes it from occupancy and the roster before freeing it.
 
@@ -124,7 +132,8 @@ Physics collision layers are separate from visual render layers. Map setup waits
 - Paths consider terrain, not intervening units. Friendly/enemy blocking needs a gameplay decision.
 - Attack-range coloring shows legal cells, while the attack button shows the exact hovered unit chance or blocked reason.
 - The global action lock prevents selection, new actions, and phase changes during movement. Attacks and defense are currently immediate, so they do not hold the lock across an animation.
-- The grid assumes a flat, unrotated floor centered on world X/Z. Moving or rotating it is not supported by all conversions and visuals.
+- The base grid assumes an unrotated floor centered on world X/Z. Elevated surfaces add layers above it, but moving or rotating the base is not supported by all conversions and visuals.
+- Combat still uses the flat-map LOS traversal; elevation-aware visibility belongs to Task 13.
 - Terrain is scanned only at startup; moving walls later will not rebuild paths.
 - Victory and Defeat are text states in the existing turn HUD; a dedicated result screen can come later.
 

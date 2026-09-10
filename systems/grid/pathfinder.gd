@@ -3,9 +3,11 @@ class_name Pathfinder
 
 var astar := AStar3D.new()
 var grid_to_id_map: Dictionary = {}
+var id_to_grid_map: Dictionary = {}
 var movement_costs: Dictionary = {}
 var stoppable_cells: Dictionary = {}
 var next_id: int = 0
+var max_step_levels: int = 1
 
 const DIRECTIONS: Array[Vector3i] = [
 	Vector3i.RIGHT,
@@ -22,15 +24,16 @@ func add_walkable_cell(grid_pos: Vector3i, world_pos: Vector3) -> void:
 	next_id += 1
 
 	grid_to_id_map[grid_pos] = id
+	id_to_grid_map[id] = grid_pos
 	astar.add_point(id, world_pos)
 	movement_costs[grid_pos] = 1
 	stoppable_cells[grid_pos] = true
 
 	for direction in DIRECTIONS:
-		var neighbor = grid_pos + direction
-		if grid_to_id_map.has(neighbor):
-			var neighbor_id = grid_to_id_map[neighbor]
-			astar.connect_points(id, neighbor_id)
+		for height_offset in range(-max_step_levels, max_step_levels + 1):
+			var neighbor = grid_pos + direction + Vector3i.UP * height_offset
+			if grid_to_id_map.has(neighbor):
+				astar.connect_points(id, grid_to_id_map[neighbor])
 
 func configure_cell(grid_pos: Vector3i, traversable: bool, can_stop: bool, movement_cost: int = 1) -> void:
 	if not grid_to_id_map.has(grid_pos):
@@ -40,6 +43,12 @@ func configure_cell(grid_pos: Vector3i, traversable: bool, can_stop: bool, movem
 	astar.set_point_weight_scale(point_id, maxf(1.0, float(movement_cost)))
 	movement_costs[grid_pos] = maxi(1, movement_cost)
 	stoppable_cells[grid_pos] = can_stop
+
+func connect_cells(from_cell: Vector3i, to_cell: Vector3i, bidirectional: bool = true) -> bool:
+	if not grid_to_id_map.has(from_cell) or not grid_to_id_map.has(to_cell):
+		return false
+	astar.connect_points(grid_to_id_map[from_cell], grid_to_id_map[to_cell], bidirectional)
+	return true
 
 func calculate_3d_path(start_grid: Vector3i, end_grid: Vector3i) -> PackedVector3Array:
 	if not grid_to_id_map.has(start_grid) or not grid_to_id_map.has(end_grid):
@@ -74,11 +83,10 @@ func get_reachable_cells(start_grid: Vector3i, movement_budget: int) -> Array[Ve
 		if current_pos != start_grid and stoppable_cells.get(current_pos, false):
 			reachable.append(current_pos)
 
-		for direction in DIRECTIONS:
-			var neighbor = current_pos + direction
-			if not grid_to_id_map.has(neighbor):
-				continue
-			if astar.is_point_disabled(grid_to_id_map[neighbor]):
+		var current_id: int = grid_to_id_map[current_pos]
+		for neighbor_id in astar.get_point_connections(current_id):
+			var neighbor: Vector3i = id_to_grid_map[neighbor_id]
+			if astar.is_point_disabled(neighbor_id):
 				continue
 			var new_cost = current_cost + int(movement_costs.get(neighbor, 1))
 			if new_cost > movement_budget or (best_cost.has(neighbor) and best_cost[neighbor] <= new_cost):

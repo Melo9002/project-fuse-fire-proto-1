@@ -2,6 +2,7 @@ extends Node
 class_name GridManager
 
 @export var cell_size: float = 1.0
+@export var elevation_step: float = 1.0
 @export var map_floor: CSGBox3D
 var map_data := MapData.new()
 var occupancy_map: Dictionary = {}
@@ -11,6 +12,7 @@ signal unit_unregistered(unit: TacticalUnit, grid_pos: Vector3i)
 
 func register_unit(unit: TacticalUnit, grid_pos: Vector3i) -> void:
 	occupancy_map[grid_pos] = unit
+	unit.grid_position = grid_pos
 	print_rich("[color=cyan][GridManager][/color] Registered unit [b]%s[/b] at %s | Faction: %s" % [unit.name, grid_pos, unit.faction])
 	unit_registered.emit(unit, grid_pos)
 
@@ -25,6 +27,10 @@ func update_unit_position(unit: TacticalUnit, from_grid: Vector3i, to_grid: Vect
 	if occupancy_map.get(from_grid) == unit:
 		occupancy_map.erase(from_grid)
 	occupancy_map[to_grid] = unit
+	unit.grid_position = to_grid
+
+func get_unit_grid(unit: TacticalUnit) -> Vector3i:
+	return unit.grid_position
 
 func is_cell_occupied(grid_pos: Vector3i) -> bool:
 	return occupancy_map.has(grid_pos)
@@ -49,7 +55,7 @@ func grid_to_world(grid_pos: Vector3i) -> Vector3:
 
 	var world_x = (float(grid_pos.x) * cell_size) - half_width + half_cell
 	var world_z = (float(grid_pos.z) * cell_size) - half_depth + half_cell
-	return Vector3(world_x, floor_top_y, world_z)
+	return Vector3(world_x, floor_top_y + float(grid_pos.y) * elevation_step, world_z)
 
 func world_to_grid(pos: Vector3) -> Vector3i:
 	if not map_floor:
@@ -58,7 +64,15 @@ func world_to_grid(pos: Vector3) -> Vector3i:
 	var half_depth = map_floor.size.z / 2.0
 	var x = floori((pos.x + half_width) / cell_size)
 	var z = floori((pos.z + half_depth) / cell_size)
-	return Vector3i(x, 0, z)
+	var column = map_data.get_column_cells(x, z)
+	if column.is_empty():
+		var floor_top_y = map_floor.global_position.y + (map_floor.size.y / 2.0)
+		return Vector3i(x, roundi((pos.y - floor_top_y) / elevation_step), z)
+	var nearest: MapCellData = column[0]
+	for cell: MapCellData in column:
+		if absf(cell.world_position.y - pos.y) < absf(nearest.world_position.y - pos.y):
+			nearest = cell
+	return nearest.grid_position
 
 func get_tile_center(world_pos: Vector3) -> Vector3:
 	return grid_to_world(world_to_grid(world_pos))

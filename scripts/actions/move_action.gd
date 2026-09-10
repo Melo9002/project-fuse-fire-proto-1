@@ -39,7 +39,7 @@ func execute() -> bool:
 		return false
 	unit.stats.consume_ap(ap_cost)
 	# Reserve the destination while the unit animates toward it.
-	var current_grid = grid_manager.world_to_grid(unit.global_position)
+	var current_grid = grid_manager.get_unit_grid(unit)
 	grid_manager.update_unit_position(unit, current_grid, target_tile)
 	unit.move_along_path(path)
 

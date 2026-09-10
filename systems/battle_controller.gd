@@ -57,16 +57,16 @@ func _ready() -> void:
 	mouse_raycaster.unit_clicked.connect(_on_unit_clicked)
 
 func initialize_battle() -> void:
-	for unit_item in turn_manager.player_units + turn_manager.enemy_units:
-		var start_grid = world_to_grid(unit_item.global_position)
-		grid_manager.register_unit(unit_item, start_grid)
-		unit_item.defeated.connect(_on_unit_defeated)
-	units_registered.emit(turn_manager.player_units)
-
 	MapBuilder.build(grid_manager, pathfinder)
 	# Let CSG collision bodies enter the physics world before scanning.
 	await get_tree().create_timer(0.05).timeout
 	MapBuilder.scan_obstacles(get_world_3d(), grid_manager, pathfinder)
+
+	for unit_item in turn_manager.player_units + turn_manager.enemy_units:
+		var start_grid = world_to_grid(unit_item.global_position - Vector3.UP * unit_item.standing_height)
+		grid_manager.register_unit(unit_item, start_grid)
+		unit_item.defeated.connect(_on_unit_defeated)
+	units_registered.emit(turn_manager.player_units)
 
 	turn_manager.start_battle()
 
@@ -170,7 +170,7 @@ func update_unit_movement_zone() -> void:
 		return
 
 	var movement_budget = tactical_unit.stats.speed if tactical_unit.stats else 6
-	var unit_grid = world_to_grid(tactical_unit.global_position)
+	var unit_grid = grid_manager.get_unit_grid(tactical_unit)
 	var raw_reachable = pathfinder.get_reachable_cells(unit_grid, movement_budget)
 
 	current_movement_zone = raw_reachable.filter(
@@ -189,7 +189,7 @@ func update_attack_range() -> void:
 		path_visualizer.clear_range_zone()
 		return
 
-	var attacker_grid = world_to_grid(tactical_unit.global_position)
+	var attacker_grid = grid_manager.get_unit_grid(tactical_unit)
 	for grid_pos in pathfinder.grid_to_id_map.keys():
 		var point_id = pathfinder.grid_to_id_map[grid_pos]
 		if pathfinder.astar.is_point_disabled(point_id):
@@ -206,7 +206,7 @@ func update_attack_range() -> void:
 	path_visualizer.draw_range_zone(current_attack_zone, Color(0.95, 0.2, 0.2, 0.3))
 
 func _get_path_to_position(target_world_pos: Vector3) -> PackedVector3Array:
-	var start_grid = world_to_grid(tactical_unit.global_position)
+	var start_grid = grid_manager.get_unit_grid(tactical_unit)
 	var end_grid = world_to_grid(target_world_pos)
 	return pathfinder.calculate_3d_path(start_grid, end_grid)
 
@@ -225,7 +225,7 @@ func try_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:
 	var evaluation = evaluate_attack(attacker, target)
 	if debug_shots:
 		var blocker = CombatRules.get_blocking_cell(attacker.global_position, target.global_position, grid_manager)
-		print("[Shot] ", attacker.name, " ", world_to_grid(attacker.global_position), " -> ", target.name, " ", world_to_grid(target.global_position), " legal=", evaluation.is_legal, " chance=", evaluation.hit_chance, " reason=", evaluation.reason)
+		print("[Shot] ", attacker.name, " ", grid_manager.get_unit_grid(attacker), " -> ", target.name, " ", grid_manager.get_unit_grid(target), " legal=", evaluation.is_legal, " chance=", evaluation.hit_chance, " reason=", evaluation.reason)
 		if blocker:
 			print("[Shot] blocker=", blocker.grid_position, " cover=", blocker.cover_type, " height=", blocker.cover_height, " walkable=", blocker.walkable)
 	if not evaluation.is_legal:
@@ -277,7 +277,7 @@ func _on_unit_defeated(unit: TacticalUnit) -> void:
 	if not is_instance_valid(unit):
 		return
 
-	grid_manager.unregister_unit_at(world_to_grid(unit.global_position))
+	grid_manager.unregister_unit_at(grid_manager.get_unit_grid(unit))
 	turn_manager.remove_unit(unit)
 	if tactical_unit == unit:
 		tactical_unit = null
