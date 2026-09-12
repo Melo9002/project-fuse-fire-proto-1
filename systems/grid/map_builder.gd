@@ -6,6 +6,8 @@ static func build(grid: GridManager, pathfinder: Pathfinder) -> void:
 	grid.map_data.clear()
 	var grid_w = int(grid.map_floor.size.x / grid.cell_size)
 	var grid_d = int(grid.map_floor.size.z / grid.cell_size)
+	grid.map_data.source_kind = "authored"
+	grid.map_data.map_size = Vector2i(grid_w, grid_d)
 	for x in range(grid_w):
 		for z in range(grid_d):
 			var cell = Vector3i(x, 0, z)

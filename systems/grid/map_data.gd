@@ -6,6 +6,9 @@ var columns: Dictionary = {}
 var traversal_links: Array[TraversalLinkData] = []
 var los_blocking_cells: Array[MapCellData] = []
 var spawn_cells: Dictionary = {}
+var source_kind: String = "authored"
+var generation_seed: int = 0
+var map_size := Vector2i.ZERO
 
 func add_cell(cell: MapCellData) -> void:
 	cells[cell.grid_position] = cell
@@ -62,3 +65,6 @@ func clear() -> void:
 	traversal_links.clear()
 	los_blocking_cells.clear()
 	spawn_cells.clear()
+	source_kind = "authored"
+	generation_seed = 0
+	map_size = Vector2i.ZERO

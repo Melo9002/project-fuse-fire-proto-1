@@ -8,6 +8,7 @@ The useful question when reading the code is: **which script owns this decision?
 levels/prototype_map/  Playable scene: map, units, camera, and references
 systems/              Battle interaction, turns, and combat rules
 systems/grid/         Terrain graph, map setup, occupancy, mouse rays
+systems/generation/   Seeded producers of runtime MapData
 systems/spawning/     Reusable spawn-zone data
 scripts/actions/      Move, Attack, and Defend operations
 scripts/components/   UnitStats: HP, AP, defense, player movement budget
@@ -28,6 +29,10 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 | `MapBuilder` | Converts authored geometry into map cells and paths | Changing how a scene or future generator supplies terrain |
 | `MapData` / `MapCellData` | Terrain, elevation, cover, LOS, and traversal facts | Asking what a battlefield cell contains |
 | `MapValidator` | Reports whether runtime map and spawn data can support a battle | Adding legality rules shared by handmade and generated maps |
+| `FlatMapGenerator` | Produces seeded flat terrain, cover, and faction spawn cells | Changing the first procedural map source |
+| `GeneratedTerrainPresenter` | Builds disposable 3D cover meshes from generated MapData | Changing generated-map presentation |
+| `MapBatchTester` | Generates and validates a range of seeds without scene instances | Adding structural batch checks and metrics |
+| `MapGraphBuilder` | Derives Pathfinder state from completed MapData | Changing how generated terrain becomes traversable |
 | `TerrainFeature` | Inspector metadata for authored obstacles | Declaring cover without relying on node names or dimensions |
 | `ElevatedSurface` | Inspector metadata that produces elevated walkable cells | Authoring rooftops, platforms, or bridges |
 | `ElevationPath` | Produces a sequence of rising walkable cells | Authoring stairs and ramps without special unit movement |
@@ -61,6 +66,14 @@ Unit coordinates do not live in spawning code. Handmade `SpawnZone` markers are 
 After authored geometry has become `MapData`, `BattleController` asks `MapValidator` to inspect it before registering units or starting turns. Validation is read-only and returns a `MapValidationResult` containing structured `MapValidationIssue` records. Each issue has a stable code, readable message, and an optional grid coordinate.
 
 The validator checks cell values and path-graph parity, LOS-index consistency, traversal endpoints and connections, unique walkable spawn cells, requested team capacity, and routes between every player/enemy spawn pair. The handmade test map passes through this same boundary that a procedural generator will use. Invalid data remains available for diagnosis, but combat does not start.
+
+## Flat generated maps with cover
+
+`FlatMapGenerator.generate()` creates the empty ground and faction spawn cells. `generate_with_cover()` applies a separate seeded pass that marks cells as low or full cover. Low cover remains traversable at movement cost 2 but cannot be a destination. Full cover disables walking and blocks line of sight. Spawn bands and a two-cell-wide central route are reserved before cover placement, and full-cover cells cannot touch orthogonally. The same inputs reproduce both spawn and cover placement.
+
+`MapGraphBuilder` creates a fresh A* graph from the completed records. The validator checks data and graph together before units spawn from those generated coordinates. `GeneratedTerrainPresenter` creates simple meshes after the data is complete; those meshes do not decide movement or combat. The playable scene reuses its floor, camera, UI, and systems while hiding authored obstacles and vertical geometry.
+
+`MapBatchTester` exercises this data pipeline without loading units, UI, physics, or meshes. Each seed receives a fresh map and path graph, then passes through `MapValidator` with 5v5 spawn requirements. The report retains failing seeds and their issue messages while aggregating low/full-cover counts. This is a fast structural test; it does not claim that every valid map is tactically interesting.
 
 ## Portrait selection
 

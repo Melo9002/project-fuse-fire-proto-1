@@ -65,11 +65,16 @@ func _ready() -> void:
 	mouse_raycaster.floor_clicked.connect(_on_floor_clicked)
 	mouse_raycaster.unit_clicked.connect(_on_unit_clicked)
 
-func initialize_battle() -> bool:
-	MapBuilder.build(grid_manager, pathfinder)
-	# Let CSG collision bodies enter the physics world before scanning.
-	await get_tree().create_timer(0.05).timeout
-	MapBuilder.scan_obstacles(get_world_3d(), grid_manager, pathfinder)
+func initialize_battle(prebuilt_map: MapData = null) -> bool:
+	if prebuilt_map:
+		grid_manager.map_data = prebuilt_map
+		MapGraphBuilder.build(prebuilt_map, pathfinder)
+	else:
+		pathfinder.clear()
+		MapBuilder.build(grid_manager, pathfinder)
+		# Let CSG collision bodies enter the physics world before scanning.
+		await get_tree().create_timer(0.05).timeout
+		MapBuilder.scan_obstacles(get_world_3d(), grid_manager, pathfinder)
 	last_map_validation = MapValidator.validate(grid_manager.map_data, pathfinder, {
 		TacticalUnit.Faction.PLAYER: turn_manager.player_units.size(),
 		TacticalUnit.Faction.ENEMY: turn_manager.enemy_units.size(),

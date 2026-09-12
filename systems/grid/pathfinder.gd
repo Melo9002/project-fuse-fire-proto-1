@@ -16,6 +16,14 @@ const DIRECTIONS: Array[Vector3i] = [
 	Vector3i.BACK,
 ]
 
+func clear() -> void:
+	astar.clear()
+	grid_to_id_map.clear()
+	id_to_grid_map.clear()
+	movement_costs.clear()
+	stoppable_cells.clear()
+	next_id = 0
+
 func add_walkable_cell(grid_pos: Vector3i, world_pos: Vector3) -> void:
 	if grid_to_id_map.has(grid_pos):
 		return # Avoid duplicating existing nodes

@@ -58,11 +58,28 @@ godot_console --headless --path . --script res://tests/elevation_combat_smoke.gd
 godot_console --headless --path . --script res://tests/battlefield_stress_smoke.gd
 godot_console --headless --path . --script res://tests/debug_tools_smoke.gd
 godot_console --headless --path . --script res://tests/map_validation_smoke.gd
+godot_console --headless --path . --script res://tests/flat_map_generator_smoke.gd
 ```
 
 The smoke tests load the real battle scene and check terrain data, shared player/AI action validation, movement, AP, attacks, walls, defense, enemy turns, selection UI, and defeat cleanup. Play the scene to check appearance and combat feel.
 
 `MapValidator` checks the completed runtime `MapData` before combat starts. A valid map prints its cell, traversal-link, and spawn-cell totals. Invalid maps report stable issue codes and readable messages for invalid cells, path-state mismatches, stale LOS indexes, broken traversal links, bad or insufficient spawn cells, and disconnected opposing spawn zones. A failed validation leaves the battle in its transition state instead of starting on broken data.
+
+The match setup can launch a deterministic generated map. Enable `USE GENERATED MAP`, enter an integer seed, and start the battle. `FlatMapGenerator` creates the ground, faction spawn cells, and a seeded mixture of low and full cover directly as `MapData`; `MapGraphBuilder` derives pathfinding from that data, validation approves it, and units spawn from its cells. Reusing a seed reproduces both spawns and cover. Spawn bands and a central route remain clear. Vertical generation is intentionally deferred.
+
+Test the default batch of seeds 1 through 100 without opening a battle scene:
+
+```powershell
+godot_console --headless --path . --script res://tests/map_generation_batch_smoke.gd
+```
+
+Pass a first seed and number of seeds after `--` to test another reproducible range:
+
+```powershell
+godot_console --headless --path . --script res://tests/map_generation_batch_smoke.gd -- 5000 250
+```
+
+The batch exits unsuccessfully and lists exact seeds and validation messages if any generated map is structurally invalid.
 
 ## Debug tools
 

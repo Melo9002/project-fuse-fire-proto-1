@@ -15,7 +15,7 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
-[node name="MatchSetup" type="Control" node_paths=PackedStringArray("player_count", "enemy_count", "start_button")]
+[node name="MatchSetup" type="Control" node_paths=PackedStringArray("player_count", "enemy_count", "start_button", "generated_map_toggle", "seed_input")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -26,6 +26,8 @@ script = ExtResource("1_setup")
 player_count = NodePath("CenterContainer/Panel/Margin/VBox/Teams/PlayerSide/PlayerCount")
 enemy_count = NodePath("CenterContainer/Panel/Margin/VBox/Teams/EnemySide/EnemyCount")
 start_button = NodePath("CenterContainer/Panel/Margin/VBox/StartButton")
+generated_map_toggle = NodePath("CenterContainer/Panel/Margin/VBox/Generation/GeneratedMapToggle")
+seed_input = NodePath("CenterContainer/Panel/Margin/VBox/Generation/SeedInput")
 battle_scene = ExtResource("2_battle")
 
 [node name="Background" type="ColorRect" parent="."]
@@ -47,7 +49,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="CenterContainer"]
-custom_minimum_size = Vector2(560, 330)
+custom_minimum_size = Vector2(560, 410)
 layout_mode = 2
 theme_override_styles/panel = SubResource("Style_panel")
 
@@ -113,7 +115,29 @@ value = 2.0
 allow_greater = false
 allow_lesser = false
 
+[node name="Generation" type="VBoxContainer" parent="CenterContainer/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="GeneratedMapToggle" type="CheckButton" parent="CenterContainer/Panel/Margin/VBox/Generation"]
+layout_mode = 2
+text = "USE GENERATED MAP"
+
+[node name="SeedLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/Generation"]
+layout_mode = 2
+text = "GENERATION SEED"
+
+[node name="SeedInput" type="SpinBox" parent="CenterContainer/Panel/Margin/VBox/Generation"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+min_value = 1.0
+max_value = 999999999.0
+value = 12345.0
+allow_greater = false
+allow_lesser = false
+update_on_text_changed = true
+
 [node name="StartButton" type="Button" parent="CenterContainer/Panel/Margin/VBox"]
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
-text = "START 2 VS 2"
+text = "START 2 VS 2 — HANDMADE"
