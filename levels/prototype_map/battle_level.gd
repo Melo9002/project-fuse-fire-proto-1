@@ -15,11 +15,11 @@ var enemy_unit_count: int = 2
 var use_generated_map: bool = false
 var generation_seed: int = 1
 
-func configure(player_count: int, enemy_count: int, generate_map: bool = false, seed: int = 1) -> void:
+func configure(player_count: int, enemy_count: int, generate_map: bool = false, map_seed: int = 1) -> void:
 	player_unit_count = clampi(player_count, 1, 5)
 	enemy_unit_count = clampi(enemy_count, 1, 5)
 	use_generated_map = generate_map
-	generation_seed = seed
+	generation_seed = map_seed
 
 func _ready() -> void:
 	if use_generated_map:

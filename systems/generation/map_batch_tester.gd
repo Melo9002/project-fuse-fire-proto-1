@@ -4,8 +4,8 @@ extends RefCounted
 static func run(first_seed: int, seed_count: int, width: int = 32, depth: int = 24, cell_size: float = 1.0, spawn_capacity: int = 5) -> MapBatchTestResult:
 	var report := MapBatchTestResult.new(first_seed, seed_count)
 	for offset in seed_count:
-		var seed := first_seed + offset
-		var map_data := FlatMapGenerator.generate_with_cover(width, depth, cell_size, seed, spawn_capacity)
+		var map_seed := first_seed + offset
+		var map_data := FlatMapGenerator.generate_with_cover(width, depth, cell_size, map_seed, spawn_capacity)
 		var pathfinder := Pathfinder.new()
 		MapGraphBuilder.build(map_data, pathfinder)
 		var validation := MapValidator.validate(map_data, pathfinder, {
@@ -24,7 +24,7 @@ static func run(first_seed: int, seed_count: int, width: int = 32, depth: int = 
 		if messages.is_empty():
 			report.record_success(cover_counts.x, cover_counts.y)
 		else:
-			report.record_failure(seed, messages)
+			report.record_failure(map_seed, messages)
 	return report
 
 static func _count_cover(map_data: MapData) -> Vector2i:

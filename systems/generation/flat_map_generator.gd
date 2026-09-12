@@ -1,10 +1,10 @@
 class_name FlatMapGenerator
 extends RefCounted
 
-static func generate(width: int, depth: int, cell_size: float, seed: int, spawn_capacity: int = 5) -> MapData:
+static func generate(width: int, depth: int, cell_size: float, map_seed: int, spawn_capacity: int = 5) -> MapData:
 	var map_data := MapData.new()
 	map_data.source_kind = "generated_flat"
-	map_data.generation_seed = seed
+	map_data.generation_seed = map_seed
 	map_data.map_size = Vector2i(width, depth)
 	var half_width := float(width) * cell_size * 0.5
 	var half_depth := float(depth) * cell_size * 0.5
@@ -19,7 +19,7 @@ static func generate(width: int, depth: int, cell_size: float, seed: int, spawn_
 			map_data.add_cell(MapCellData.new(cell_position, world_position))
 
 	var rng := RandomNumberGenerator.new()
-	rng.seed = seed
+	rng.seed = map_seed
 	var available_rows: Array[int] = []
 	for z in range(1, depth - 1):
 		available_rows.append(z)
@@ -39,12 +39,12 @@ static func generate(width: int, depth: int, cell_size: float, seed: int, spawn_
 	map_data.rebuild_los_index()
 	return map_data
 
-static func generate_with_cover(width: int, depth: int, cell_size: float, seed: int, spawn_capacity: int = 5) -> MapData:
-	var map_data := generate(width, depth, cell_size, seed, spawn_capacity)
+static func generate_with_cover(width: int, depth: int, cell_size: float, map_seed: int, spawn_capacity: int = 5) -> MapData:
+	var map_data := generate(width, depth, cell_size, map_seed, spawn_capacity)
 	map_data.source_kind = "generated_cover"
 	var rng := RandomNumberGenerator.new()
-	rng.seed = seed ^ 0x5F3759DF
-	var center_row := depth / 2
+	rng.seed = map_seed ^ 0x5F3759DF
+	var center_row := floori(float(depth) / 2.0)
 	var candidates: Array[Vector3i] = []
 	for x in range(5, width - 5):
 		for z in range(2, depth - 2):
@@ -54,7 +54,7 @@ static func generate_with_cover(width: int, depth: int, cell_size: float, seed: 
 			candidates.append(Vector3i(x, 0, z))
 	_shuffle_cells(candidates, rng)
 
-	var desired_cover := clampi((width * depth) / 10, 12, candidates.size())
+	var desired_cover := clampi(floori(float(width * depth) / 10.0), 12, candidates.size())
 	var placed := 0
 	for grid_position in candidates:
 		if placed >= desired_cover:

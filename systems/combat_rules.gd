@@ -18,7 +18,7 @@ class AttackEvaluation:
 		cover_type = cover
 		reason = message
 
-static func evaluate_attack(attacker: TacticalUnit, target: TacticalUnit, grid: GridManager, world: World3D) -> AttackEvaluation:
+static func evaluate_attack(attacker: TacticalUnit, target: TacticalUnit, grid: GridManager, _world: World3D) -> AttackEvaluation:
 	if not is_instance_valid(attacker) or not is_instance_valid(target):
 		return AttackEvaluation.new(false, 0, MapCellData.CoverType.NONE, "Invalid target")
 	if not attacker.stats or not target.stats or attacker.stats.is_defeated or target.stats.is_defeated:

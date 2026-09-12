@@ -190,7 +190,7 @@ func _on_floor_clicked(raw_position: Vector3) -> void:
 
 	await try_move(tactical_unit, clicked_grid)
 
-func _on_turn_phase_changed(new_phase: TurnManager.TurnPhase) -> void:
+func _on_turn_phase_changed(_new_phase: TurnManager.TurnPhase) -> void:
 	var is_player_control = is_current_phase_manually_controlled()
 	grid_cursor.visible = is_player_control
 	if not is_player_control:
@@ -281,8 +281,11 @@ func is_current_phase_manually_controlled() -> bool:
 		or (debug_enemy_control and turn_manager.current_phase == TurnManager.TurnPhase.ENEMY_TURN)
 
 func record_ai_decision(actor: TacticalUnit, action: String, subject: String, reason: String, alternatives: String) -> void:
+	var actor_name := "Unknown"
+	if is_instance_valid(actor):
+		actor_name = String(actor.name)
 	ai_decision_recorded.emit({
-		"actor": actor.name if is_instance_valid(actor) else "Unknown",
+		"actor": actor_name,
 		"action": action,
 		"subject": subject,
 		"reason": reason,

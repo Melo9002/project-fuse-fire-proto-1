@@ -23,8 +23,8 @@ func record_success(low_cover: int, full_cover: int) -> void:
 	maximum_full_cover = maxi(maximum_full_cover, full_cover)
 	total_full_cover += full_cover
 
-func record_failure(seed: int, messages: Array[String]) -> void:
-	failures[seed] = messages
+func record_failure(map_seed: int, messages: Array[String]) -> void:
+	failures[map_seed] = messages
 
 func passed() -> bool:
 	return failures.is_empty()

@@ -77,7 +77,7 @@ func _on_attack_preview_changed(text: String) -> void:
 	if attack_button and battle_controller.is_attack_mode_active:
 		attack_button.text = text if not text.is_empty() else "Cancel Attack"
 
-func _on_turn_phase_changed(new_phase: TurnManager.TurnPhase) -> void:
+func _on_turn_phase_changed(_new_phase: TurnManager.TurnPhase) -> void:
 	visible = battle_controller.is_current_phase_manually_controlled()
 	_update_button_states()
 
