@@ -24,6 +24,7 @@ signal ai_decision_recorded(record: Dictionary)
 const UNIFORM_AP_COST = 1
 
 var pathfinder := Pathfinder.new()
+var last_map_validation: MapValidationResult
 var current_movement_zone: Array[Vector3i] = []
 var current_attack_zone: Array[Vector3i] = []
 var _last_attack_preview := ""
@@ -64,11 +65,23 @@ func _ready() -> void:
 	mouse_raycaster.floor_clicked.connect(_on_floor_clicked)
 	mouse_raycaster.unit_clicked.connect(_on_unit_clicked)
 
-func initialize_battle() -> void:
+func initialize_battle() -> bool:
 	MapBuilder.build(grid_manager, pathfinder)
 	# Let CSG collision bodies enter the physics world before scanning.
 	await get_tree().create_timer(0.05).timeout
 	MapBuilder.scan_obstacles(get_world_3d(), grid_manager, pathfinder)
+	last_map_validation = MapValidator.validate(grid_manager.map_data, pathfinder, {
+		TacticalUnit.Faction.PLAYER: turn_manager.player_units.size(),
+		TacticalUnit.Faction.ENEMY: turn_manager.enemy_units.size(),
+	})
+	if not last_map_validation.is_valid():
+		push_error("Battlefield validation failed:\n%s" % last_map_validation.describe())
+		return false
+	print_rich("[color=green][MapValidator][/color] PASSED — %d cells, %d traversal links, %d spawn cells" % [
+		grid_manager.map_data.cells.size(),
+		grid_manager.map_data.traversal_links.size(),
+		grid_manager.map_data.get_total_spawn_count(),
+	])
 
 	for unit_item in turn_manager.player_units + turn_manager.enemy_units:
 		var start_grid = world_to_grid(unit_item.global_position - Vector3.UP * unit_item.standing_height)
@@ -77,6 +90,7 @@ func initialize_battle() -> void:
 	units_registered.emit(turn_manager.player_units)
 
 	turn_manager.start_battle()
+	return true
 
 func toggle_move_mode() -> void:
 	if is_current_phase_manually_controlled() and not is_action_in_progress:

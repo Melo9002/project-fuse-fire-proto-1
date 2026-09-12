@@ -27,6 +27,7 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 | `TurnManager` | Phases, active unit, rosters, rounds | Changing whose turn it is or when AP resets |
 | `MapBuilder` | Converts authored geometry into map cells and paths | Changing how a scene or future generator supplies terrain |
 | `MapData` / `MapCellData` | Terrain, elevation, cover, LOS, and traversal facts | Asking what a battlefield cell contains |
+| `MapValidator` | Reports whether runtime map and spawn data can support a battle | Adding legality rules shared by handmade and generated maps |
 | `TerrainFeature` | Inspector metadata for authored obstacles | Declaring cover without relying on node names or dimensions |
 | `ElevatedSurface` | Inspector metadata that produces elevated walkable cells | Authoring rooftops, platforms, or bridges |
 | `ElevationPath` | Produces a sequence of rising walkable cells | Authoring stairs and ramps without special unit movement |
@@ -53,7 +54,13 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 
 `MatchSetup` collects two independent counts and configures a new `BattleLevel`. The level asks each `SpawnZone` for the requested number of marker transforms, instantiates the shared tactical-unit scene, fills the turn rosters, and adds one AI controller per enemy. Only then does it tell `BattleController` to scan and start the match.
 
-Unit coordinates do not live in spawning code. They are scene data under the two spawn zones. A future handmade or generated map can supply different zones without changing `BattleLevel`, but procedural generation itself is outside this task.
+Unit coordinates do not live in spawning code. Handmade `SpawnZone` markers are converted into faction-keyed cells inside `MapData`; a future generator can supply the same data without scene markers. `BattleLevel` still uses authored transforms to instantiate the current Beans, while map validation uses the reusable cell representation.
+
+## Battlefield validation
+
+After authored geometry has become `MapData`, `BattleController` asks `MapValidator` to inspect it before registering units or starting turns. Validation is read-only and returns a `MapValidationResult` containing structured `MapValidationIssue` records. Each issue has a stable code, readable message, and an optional grid coordinate.
+
+The validator checks cell values and path-graph parity, LOS-index consistency, traversal endpoints and connections, unique walkable spawn cells, requested team capacity, and routes between every player/enemy spawn pair. The handmade test map passes through this same boundary that a procedural generator will use. Invalid data remains available for diagnosis, but combat does not start.
 
 ## Portrait selection
 

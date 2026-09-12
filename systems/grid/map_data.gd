@@ -5,6 +5,7 @@ var cells: Dictionary = {}
 var columns: Dictionary = {}
 var traversal_links: Array[TraversalLinkData] = []
 var los_blocking_cells: Array[MapCellData] = []
+var spawn_cells: Dictionary = {}
 
 func add_cell(cell: MapCellData) -> void:
 	cells[cell.grid_position] = cell
@@ -32,6 +33,23 @@ func get_column_cells(x: int, z: int) -> Array[MapCellData]:
 func add_traversal_link(link: TraversalLinkData) -> void:
 	traversal_links.append(link)
 
+func add_spawn_cell(faction: TacticalUnit.Faction, grid_position: Vector3i) -> void:
+	if not spawn_cells.has(faction):
+		spawn_cells[faction] = []
+	var cells_for_faction: Array = spawn_cells[faction]
+	cells_for_faction.append(grid_position)
+
+func get_spawn_cells(faction: TacticalUnit.Faction) -> Array[Vector3i]:
+	var result: Array[Vector3i] = []
+	result.assign(spawn_cells.get(faction, []))
+	return result
+
+func get_total_spawn_count() -> int:
+	var total := 0
+	for faction_cells in spawn_cells.values():
+		total += faction_cells.size()
+	return total
+
 func rebuild_los_index() -> void:
 	los_blocking_cells.clear()
 	for cell: MapCellData in cells.values():
@@ -43,3 +61,4 @@ func clear() -> void:
 	columns.clear()
 	traversal_links.clear()
 	los_blocking_cells.clear()
+	spawn_cells.clear()

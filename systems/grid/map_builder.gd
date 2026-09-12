@@ -23,6 +23,12 @@ static func build(grid: GridManager, pathfinder: Pathfinder) -> void:
 		if elevation_path:
 			_add_elevation_path(elevation_path, grid, pathfinder)
 
+	for zone_node in grid.get_tree().get_nodes_in_group("spawn_zones"):
+		var zone = zone_node as SpawnZone
+		if zone:
+			for spawn_cell in zone.get_spawn_cells(grid):
+				grid.map_data.add_spawn_cell(zone.faction, spawn_cell)
+
 static func scan_obstacles(world: World3D, grid: GridManager, pathfinder: Pathfinder) -> void:
 	var space_state = world.direct_space_state
 	var cell_box := BoxShape3D.new()

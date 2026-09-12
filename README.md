@@ -57,9 +57,12 @@ godot_console --headless --path . --script res://tests/vertical_traversal_smoke.
 godot_console --headless --path . --script res://tests/elevation_combat_smoke.gd
 godot_console --headless --path . --script res://tests/battlefield_stress_smoke.gd
 godot_console --headless --path . --script res://tests/debug_tools_smoke.gd
+godot_console --headless --path . --script res://tests/map_validation_smoke.gd
 ```
 
 The smoke tests load the real battle scene and check terrain data, shared player/AI action validation, movement, AP, attacks, walls, defense, enemy turns, selection UI, and defeat cleanup. Play the scene to check appearance and combat feel.
+
+`MapValidator` checks the completed runtime `MapData` before combat starts. A valid map prints its cell, traversal-link, and spawn-cell totals. Invalid maps report stable issue codes and readable messages for invalid cells, path-state mismatches, stale LOS indexes, broken traversal links, bad or insufficient spawn cells, and disconnected opposing spawn zones. A failed validation leaves the battle in its transition state instead of starting on broken data.
 
 ## Debug tools
 
