@@ -16,14 +16,15 @@ func _initialize() -> void:
 	])
 	print("[MapBatch] Low cover min/avg/max: %d / %.1f / %d" % [report.minimum_low_cover, report.average_low_cover(), report.maximum_low_cover])
 	print("[MapBatch] Full cover min/avg/max: %d / %.1f / %d" % [report.minimum_full_cover, report.average_full_cover(), report.maximum_full_cover])
+	print("[MapBatch] Cohesive cover min/avg/max: %d / %.1f / %d" % [report.minimum_cohesive_cover, report.average_cohesive_cover(), report.maximum_cohesive_cover])
 	if report.passed():
 		print("[MapBatch] PASSED — all %d maps are valid" % report.seed_count)
 		quit(0)
 		return
 
-	for seed in report.failures:
-		print("[MapBatch] FAILED seed %d" % seed)
-		for message in report.failures[seed]:
+	for map_seed in report.failures:
+		print("[MapBatch] FAILED seed %d" % map_seed)
+		for message in report.failures[map_seed]:
 			print("  %s" % message)
 	print("[MapBatch] FAILED — %d of %d maps are invalid" % [report.failures.size(), report.seed_count])
 	quit(1)

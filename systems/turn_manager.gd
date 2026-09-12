@@ -1,7 +1,7 @@
 extends Node
 class_name TurnManager
 
-enum TurnPhase { PLAYER_TURN, ENEMY_TURN, TRANSITION }
+enum TurnPhase { PLAYER_TURN, ALLY_TURN, ENEMY_TURN, TRANSITION }
 enum BattleResult { ONGOING, VICTORY, DEFEAT }
 
 signal turn_phase_changed(new_phase: TurnPhase)
@@ -12,6 +12,7 @@ signal player_actions_exhausted
 
 @export_group("Battle Roster")
 @export var player_units: Array[TacticalUnit] = []
+@export var allied_units: Array[TacticalUnit] = []
 @export var enemy_units: Array[TacticalUnit] = []
 
 var current_phase: TurnPhase = TurnPhase.TRANSITION
@@ -38,7 +39,9 @@ func end_current_turn() -> void:
 
 	print_rich("[color=yellow][TURN][/color] end_current_turn() called. Current Phase: ", current_phase)
 	if current_phase == TurnPhase.PLAYER_TURN:
-		_start_enemy_turn_phase()
+		_start_ally_turn_phase()
+	elif current_phase == TurnPhase.ALLY_TURN:
+		_advance_ally_unit_queue()
 	elif current_phase == TurnPhase.ENEMY_TURN:
 		_advance_enemy_unit_queue()
 
@@ -66,7 +69,7 @@ func advance_automated_player(finished_unit: TacticalUnit) -> void:
 			and candidate.stats.current_ap > 0:
 			_set_active_unit(candidate)
 			return
-	_start_enemy_turn_phase()
+	_start_ally_turn_phase()
 
 func can_unit_act(unit: TacticalUnit) -> bool:
 	if battle_result != BattleResult.ONGOING or active_unit != unit or is_any_unit_moving():
@@ -75,19 +78,22 @@ func can_unit_act(unit: TacticalUnit) -> bool:
 		return false
 	if current_phase == TurnPhase.PLAYER_TURN:
 		return player_units.has(unit)
+	if current_phase == TurnPhase.ALLY_TURN:
+		return allied_units.has(unit)
 	if current_phase == TurnPhase.ENEMY_TURN:
 		return enemy_units.has(unit)
 	return false
 
 func remove_unit(unit: TacticalUnit) -> void:
 	player_units.erase(unit)
+	allied_units.erase(unit)
 	enemy_units.erase(unit)
 	if active_unit == unit:
 		active_unit = null
 	_check_battle_result()
 
 func is_any_unit_moving() -> bool:
-	for unit in player_units + enemy_units:
+	for unit in player_units + allied_units + enemy_units:
 		if is_instance_valid(unit) and unit.is_moving:
 			return true
 	return false
@@ -152,6 +158,27 @@ func _start_enemy_turn_phase() -> void:
 		turn_phase_changed.emit(current_phase)
 	else:
 		_end_round()
+
+func _start_ally_turn_phase() -> void:
+	if allied_units.is_empty():
+		_start_enemy_turn_phase()
+		return
+	current_phase = TurnPhase.ALLY_TURN
+	for unit_item in allied_units:
+		if is_instance_valid(unit_item) and unit_item.stats:
+			unit_item.stats.reset_turn()
+	active_unit_index = 0
+	_set_active_unit(allied_units[0])
+	turn_phase_changed.emit(current_phase)
+
+func _advance_ally_unit_queue() -> void:
+	if battle_result != BattleResult.ONGOING:
+		return
+	active_unit_index += 1
+	if active_unit_index < allied_units.size():
+		_set_active_unit(allied_units[active_unit_index])
+	else:
+		_start_enemy_turn_phase()
 
 func _advance_enemy_unit_queue() -> void:
 	if battle_result != BattleResult.ONGOING:

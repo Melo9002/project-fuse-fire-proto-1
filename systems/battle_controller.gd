@@ -77,6 +77,7 @@ func initialize_battle(prebuilt_map: MapData = null) -> bool:
 		MapBuilder.scan_obstacles(get_world_3d(), grid_manager, pathfinder)
 	last_map_validation = MapValidator.validate(grid_manager.map_data, pathfinder, {
 		TacticalUnit.Faction.PLAYER: turn_manager.player_units.size(),
+		TacticalUnit.Faction.ALLY: turn_manager.allied_units.size(),
 		TacticalUnit.Faction.ENEMY: turn_manager.enemy_units.size(),
 	})
 	if not last_map_validation.is_valid():
@@ -88,7 +89,7 @@ func initialize_battle(prebuilt_map: MapData = null) -> bool:
 		grid_manager.map_data.get_total_spawn_count(),
 	])
 
-	for unit_item in turn_manager.player_units + turn_manager.enemy_units:
+	for unit_item in turn_manager.player_units + turn_manager.allied_units + turn_manager.enemy_units:
 		var start_grid = world_to_grid(unit_item.global_position - Vector3.UP * unit_item.standing_height)
 		grid_manager.register_unit(unit_item, start_grid)
 		unit_item.defeated.connect(_on_unit_defeated)

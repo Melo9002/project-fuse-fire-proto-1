@@ -105,8 +105,15 @@ static func _validate_spawns(map_data: MapData, pathfinder: Pathfinder, required
 	if not pathfinder:
 		result.add_error("PATHFINDER_MISSING", "Spawn connectivity cannot be checked without a pathfinder.")
 		return
-	for player_cell in player_spawns:
-		for enemy_cell in enemy_spawns:
-			if map_data.has_cell(player_cell) and map_data.has_cell(enemy_cell) \
-				and pathfinder.calculate_3d_path(player_cell, enemy_cell).is_empty():
-				result.add_error("SPAWNS_DISCONNECTED", "Opposing spawn cells do not share a route: %s -> %s." % [player_cell, enemy_cell])
+	var combat_factions := [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ALLY, TacticalUnit.Faction.ENEMY]
+	for first_index in combat_factions.size():
+		var first_faction: TacticalUnit.Faction = combat_factions[first_index]
+		for second_index in range(first_index + 1, combat_factions.size()):
+			var second_faction: TacticalUnit.Faction = combat_factions[second_index]
+			if not FactionRules.are_hostile(first_faction, second_faction):
+				continue
+			for first_cell in map_data.get_spawn_cells(first_faction):
+				for second_cell in map_data.get_spawn_cells(second_faction):
+					if map_data.has_cell(first_cell) and map_data.has_cell(second_cell) \
+						and pathfinder.calculate_3d_path(first_cell, second_cell).is_empty():
+						result.add_error("SPAWNS_DISCONNECTED", "Hostile spawn cells do not share a route: %s -> %s." % [first_cell, second_cell])

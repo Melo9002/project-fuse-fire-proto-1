@@ -57,9 +57,11 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 
 ## Match setup and spawning
 
-`MatchSetup` collects two independent counts and configures a new `BattleLevel`. The level asks each `SpawnZone` for the requested number of marker transforms, instantiates the shared tactical-unit scene, fills the turn rosters, and adds one AI controller per enemy. Only then does it tell `BattleController` to scan and start the match.
+`MatchSetup` collects independent player, allied, and enemy counts and configures a new `BattleLevel`. The level asks each `SpawnZone` for the requested number of marker transforms, instantiates the shared tactical-unit scene, fills the turn rosters, and adds one AI controller per unit. Only then does it tell `BattleController` to scan and start the match.
 
 Unit coordinates do not live in spawning code. Handmade `SpawnZone` markers are converted into faction-keyed cells inside `MapData`; a future generator can supply the same data without scene markers. `BattleLevel` still uses authored transforms to instantiate the current Beans, while map validation uses the reusable cell representation.
+
+Rounds proceed through `PLAYER_TURN → ALLY_TURN → ENEMY_TURN`; an empty allied roster skips its phase. Allied units are autonomous, use the same `AIController` and action gateways as enemies, remain outside player selection, and share player hostility rules. They do not prevent defeat when every player-controlled unit is lost.
 
 ## Battlefield validation
 
@@ -69,11 +71,11 @@ The validator checks cell values and path-graph parity, LOS-index consistency, t
 
 ## Flat generated maps with cover
 
-`FlatMapGenerator.generate()` creates the empty ground and faction spawn cells. `generate_with_cover()` applies a separate seeded pass that marks cells as low or full cover. Low cover remains traversable at movement cost 2 but cannot be a destination. Full cover disables walking and blocks line of sight. Spawn bands and a two-cell-wide central route are reserved before cover placement, and full-cover cells cannot touch orthogonally. The same inputs reproduce both spawn and cover placement.
+`FlatMapGenerator.generate()` creates the empty ground and faction spawn cells. `generate_with_cover()` applies a separate seeded layout grammar containing low/full barricades, corners, low walls, and staggered positions. It chooses anchors and rotations from the map seed, then accepts an entire formation only when every member avoids spawn bands, the central route, existing cover, and invalid cells. Low cover remains traversable at movement cost 2 but cannot be a destination. Full cover disables walking and blocks line of sight. The same inputs reproduce both spawn and cover placement.
 
 `MapGraphBuilder` creates a fresh A* graph from the completed records. The validator checks data and graph together before units spawn from those generated coordinates. `GeneratedTerrainPresenter` creates simple meshes after the data is complete; those meshes do not decide movement or combat. The playable scene reuses its floor, camera, UI, and systems while hiding authored obstacles and vertical geometry.
 
-`MapBatchTester` exercises this data pipeline without loading units, UI, physics, or meshes. Each seed receives a fresh map and path graph, then passes through `MapValidator` with 5v5 spawn requirements. The report retains failing seeds and their issue messages while aggregating low/full-cover counts. This is a fast structural test; it does not claim that every valid map is tactically interesting.
+`MapBatchTester` exercises this data pipeline without loading units, UI, physics, or meshes. Each seed receives a fresh map and path graph, then passes through `MapValidator` with 5v5 spawn requirements. The report retains failing seeds and their issue messages while aggregating low, full, and cohesive-cover counts. A refined layout also requires at least 75% of cover cells to have an orthogonally adjacent cover neighbor. This is a fast structural and layout-cohesion test; it does not claim that every valid map is tactically interesting.
 
 ## Portrait selection
 

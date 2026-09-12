@@ -25,10 +25,17 @@ func _on_turn_phase_changed(new_phase: TurnManager.TurnPhase) -> void:
 			end_turn_button.disabled = battle_controller.debug_player_ai
 			end_turn_button.text = "End Turn"
 			end_turn_button.modulate = Color.WHITE
+		TurnManager.TurnPhase.ALLY_TURN:
+			turn_label.text = "ALLY TURN — AI"
+			turn_label.modulate = Color("2ecc71")
+			end_turn_button.disabled = true
+			end_turn_button.text = "Allies Acting"
 		TurnManager.TurnPhase.ENEMY_TURN:
 			turn_label.text = "ENEMY TURN — MANUAL" if battle_controller.debug_enemy_control else "ENEMY TURN"
 			turn_label.modulate = Color.RED
 			end_turn_button.disabled = not battle_controller.debug_enemy_control
+			end_turn_button.text = "End Enemy Turn" if battle_controller.debug_enemy_control else "Enemies Acting"
+			end_turn_button.modulate = Color.WHITE
 		TurnManager.TurnPhase.TRANSITION:
 			turn_label.text = "PHASE TRANSITION..."
 			turn_label.modulate = Color.YELLOW

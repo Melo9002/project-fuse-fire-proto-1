@@ -24,6 +24,7 @@ func _check_data_generation() -> void:
 	check(first.source_kind == "generated_cover" and first.generation_seed == 4242, "Generated MapData records its source and seed")
 	check(first.get_spawn_cells(TacticalUnit.Faction.PLAYER) == repeated.get_spawn_cells(TacticalUnit.Faction.PLAYER), "The same seed reproduces player spawns")
 	check(first.get_spawn_cells(TacticalUnit.Faction.ENEMY) == repeated.get_spawn_cells(TacticalUnit.Faction.ENEMY), "The same seed reproduces enemy spawns")
+	check(first.get_spawn_cells(TacticalUnit.Faction.ALLY) == repeated.get_spawn_cells(TacticalUnit.Faction.ALLY), "The same seed reproduces ally spawns")
 	var spawn_layout_changed := first.get_spawn_cells(TacticalUnit.Faction.PLAYER) != different.get_spawn_cells(TacticalUnit.Faction.PLAYER) \
 		or first.get_spawn_cells(TacticalUnit.Faction.ENEMY) != different.get_spawn_cells(TacticalUnit.Faction.ENEMY)
 	check(spawn_layout_changed, "A different seed changes the spawn layout")
@@ -32,7 +33,9 @@ func _check_data_generation() -> void:
 	check(first_signature != _cover_signature(different), "A different seed changes cover terrain")
 	var cover_counts := _cover_counts(first)
 	check(cover_counts.x > 0 and cover_counts.y > 0, "Generated terrain contains both low and full cover")
-	for faction in [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ENEMY]:
+	check(_cohesive_cover_count(first) >= floori(float(cover_counts.x + cover_counts.y) * 0.75), "Most generated cover belongs to a formation")
+	check(_contains_cover_corner(first), "Generated terrain includes a tactical corner formation")
+	for faction in [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ALLY, TacticalUnit.Faction.ENEMY]:
 		for spawn in first.get_spawn_cells(faction):
 			check(first.get_cell(spawn).cover_type == MapCellData.CoverType.NONE, "Spawn bands stay clear of generated cover")
 	var graph := Pathfinder.new()
@@ -91,3 +94,31 @@ func _cover_counts(map_data: MapData) -> Vector2i:
 		elif cell.cover_type == MapCellData.CoverType.FULL:
 			counts.y += 1
 	return counts
+
+func _cohesive_cover_count(map_data: MapData) -> int:
+	var total := 0
+	for cell: MapCellData in map_data.cells.values():
+		if cell.cover_type == MapCellData.CoverType.NONE:
+			continue
+		for direction in [Vector3i.LEFT, Vector3i.RIGHT, Vector3i.FORWARD, Vector3i.BACK]:
+			var neighbor := map_data.get_cell(cell.grid_position + direction)
+			if neighbor and neighbor.cover_type != MapCellData.CoverType.NONE:
+				total += 1
+				break
+	return total
+
+func _contains_cover_corner(map_data: MapData) -> bool:
+	for cell: MapCellData in map_data.cells.values():
+		if cell.cover_type == MapCellData.CoverType.NONE:
+			continue
+		var horizontal := false
+		var vertical := false
+		for direction in [Vector3i.LEFT, Vector3i.RIGHT]:
+			var neighbor := map_data.get_cell(cell.grid_position + direction)
+			horizontal = horizontal or (neighbor and neighbor.cover_type != MapCellData.CoverType.NONE)
+		for direction in [Vector3i.FORWARD, Vector3i.BACK]:
+			var neighbor := map_data.get_cell(cell.grid_position + direction)
+			vertical = vertical or (neighbor and neighbor.cover_type != MapCellData.CoverType.NONE)
+		if horizontal and vertical:
+			return true
+	return false

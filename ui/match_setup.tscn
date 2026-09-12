@@ -15,7 +15,7 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
-[node name="MatchSetup" type="Control" node_paths=PackedStringArray("player_count", "enemy_count", "start_button", "generated_map_toggle", "seed_input")]
+[node name="MatchSetup" type="Control" node_paths=PackedStringArray("player_count", "enemy_count", "ally_count", "start_button", "generated_map_toggle", "seed_input")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -25,6 +25,7 @@ grow_vertical = 2
 script = ExtResource("1_setup")
 player_count = NodePath("CenterContainer/Panel/Margin/VBox/Teams/PlayerSide/PlayerCount")
 enemy_count = NodePath("CenterContainer/Panel/Margin/VBox/Teams/EnemySide/EnemyCount")
+ally_count = NodePath("CenterContainer/Panel/Margin/VBox/Teams/AllySide/AllyCount")
 start_button = NodePath("CenterContainer/Panel/Margin/VBox/StartButton")
 generated_map_toggle = NodePath("CenterContainer/Panel/Margin/VBox/Generation/GeneratedMapToggle")
 seed_input = NodePath("CenterContainer/Panel/Margin/VBox/Generation/SeedInput")
@@ -49,7 +50,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="CenterContainer"]
-custom_minimum_size = Vector2(560, 410)
+custom_minimum_size = Vector2(720, 410)
 layout_mode = 2
 theme_override_styles/panel = SubResource("Style_panel")
 
@@ -78,7 +79,7 @@ modulate = Color(0.7, 0.78, 0.86, 1)
 
 [node name="Teams" type="HBoxContainer" parent="CenterContainer/Panel/Margin/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 48
+theme_override_constants/separation = 28
 alignment = 1
 
 [node name="PlayerSide" type="VBoxContainer" parent="CenterContainer/Panel/Margin/VBox/Teams"]
@@ -112,6 +113,21 @@ layout_mode = 2
 min_value = 1.0
 max_value = 5.0
 value = 2.0
+allow_greater = false
+allow_lesser = false
+
+[node name="AllySide" type="VBoxContainer" parent="CenterContainer/Panel/Margin/VBox/Teams"]
+layout_mode = 2
+
+[node name="AllyLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/Teams/AllySide"]
+layout_mode = 2
+text = "AI ALLIES"
+horizontal_alignment = 1
+
+[node name="AllyCount" type="SpinBox" parent="CenterContainer/Panel/Margin/VBox/Teams/AllySide"]
+custom_minimum_size = Vector2(150, 44)
+layout_mode = 2
+max_value = 5.0
 allow_greater = false
 allow_lesser = false
 

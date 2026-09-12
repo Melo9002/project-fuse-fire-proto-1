@@ -89,6 +89,8 @@ func _should_control_unit() -> bool:
 		return false
 	if turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN:
 		return unit.faction == TacticalUnit.Faction.PLAYER and battle_controller.debug_player_ai
+	if turn_manager.current_phase == TurnManager.TurnPhase.ALLY_TURN:
+		return unit.faction == TacticalUnit.Faction.ALLY
 	if turn_manager.current_phase == TurnManager.TurnPhase.ENEMY_TURN:
 		return unit.faction == TacticalUnit.Faction.ENEMY and not battle_controller.debug_enemy_control
 	return false
@@ -138,7 +140,7 @@ func _find_nearest_hostile() -> TacticalUnit:
 
 func _get_hostile_units() -> Array[TacticalUnit]:
 	var hostile_units: Array[TacticalUnit] = []
-	for candidate in turn_manager.player_units + turn_manager.enemy_units:
+	for candidate in turn_manager.player_units + turn_manager.allied_units + turn_manager.enemy_units:
 		if is_instance_valid(candidate) and FactionRules.are_hostile(unit.faction, candidate.faction):
 			hostile_units.append(candidate)
 	return hostile_units

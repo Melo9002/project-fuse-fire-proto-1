@@ -26,7 +26,7 @@ func _run() -> void:
 	check(battle.last_map_validation != null and battle.last_map_validation.is_valid(), "The handmade battlefield passes validation before battle starts")
 	check(map_data.get_spawn_cells(TacticalUnit.Faction.PLAYER).size() == 5, "Player SpawnZone contributes five MapData cells")
 	check(map_data.get_spawn_cells(TacticalUnit.Faction.ENEMY).size() == 5, "Enemy SpawnZone contributes five MapData cells")
-	check(map_data.get_total_spawn_count() == 10, "Validation summary counts all faction spawn cells")
+	check(map_data.get_total_spawn_count() == 15, "Validation summary counts all faction spawn cells")
 
 	var sample_cell: MapCellData = map_data.get_cell(Vector3i(0, 0, 0))
 	var original_cost := sample_cell.movement_cost

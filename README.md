@@ -33,7 +33,9 @@ Units start their phase with 2 AP and have 100 HP. Attacks deal 25 damage, or 12
 
 Start with [the architecture guide](docs/architecture.md): ownership, the path from a click to an action, cleanup changes, and known limitations.
 
-The prototype has weighted 3D paths, low-cover vaulting, directional cover, elevation-aware line of sight, ladders, ramps, stairs, platforms, movement previews, selection, AP, shared actions, faction relationships, attacks, defense, enemy turns, battle results, a tactical camera, and health displays. It does not yet have procedural maps or a finished tactical ruleset.
+The prototype has weighted 3D paths, low-cover vaulting, directional cover, elevation-aware line of sight, ladders, ramps, stairs, platforms, movement previews, selection, AP, shared actions, faction relationships, attacks, defense, autonomous allied and enemy turns, generated maps, battle results, a tactical camera, and health displays. It does not yet have mission actors, objectives, or a finished tactical ruleset.
+
+Match setup supports zero to five green AI allies. Turns proceed from player to allies to enemies. Allies use the same validated movement, attack, and defense actions as every other combatant, are friendly toward players, and are hostile toward enemies. Allies do not appear in the player portrait selector and cannot be selected manually.
 
 The 32×24 test battlefield is a systems lab: separated 5v5 spawn zones, long firing lanes, a central gate complex, a southern vault course, twin platforms, a three-route high platform, and stacked decks that allow units above and below the same X/Z position.
 
@@ -65,7 +67,7 @@ The smoke tests load the real battle scene and check terrain data, shared player
 
 `MapValidator` checks the completed runtime `MapData` before combat starts. A valid map prints its cell, traversal-link, and spawn-cell totals. Invalid maps report stable issue codes and readable messages for invalid cells, path-state mismatches, stale LOS indexes, broken traversal links, bad or insufficient spawn cells, and disconnected opposing spawn zones. A failed validation leaves the battle in its transition state instead of starting on broken data.
 
-The match setup can launch a deterministic generated map. Enable `USE GENERATED MAP`, enter an integer seed, and start the battle. `FlatMapGenerator` creates the ground, faction spawn cells, and a seeded mixture of low and full cover directly as `MapData`; `MapGraphBuilder` derives pathfinding from that data, validation approves it, and units spawn from its cells. Reusing a seed reproduces both spawns and cover. Spawn bands and a central route remain clear. Vertical generation is intentionally deferred.
+The match setup can launch a deterministic generated map. Enable `USE GENERATED MAP`, enter an integer seed, and start the battle. `FlatMapGenerator` creates the ground, faction spawn cells, and seeded tactical cover formations directly as `MapData`; `MapGraphBuilder` derives pathfinding from that data, validation approves it, and units spawn from its cells. Barricades, corners, low walls, and staggered positions rotate and move with the seed while cover density stays comparable. Reusing a seed reproduces both spawns and cover. Spawn bands and a central route remain clear. Vertical generation is intentionally deferred.
 
 Test the default batch of seeds 1 through 100 without opening a battle scene:
 
@@ -79,7 +81,7 @@ Pass a first seed and number of seeds after `--` to test another reproducible ra
 godot_console --headless --path . --script res://tests/map_generation_batch_smoke.gd -- 5000 250
 ```
 
-The batch exits unsuccessfully and lists exact seeds and validation messages if any generated map is structurally invalid.
+The batch exits unsuccessfully and lists exact seeds and validation messages if any generated map is structurally invalid. It also rejects scattered layouts when fewer than 75% of cover cells have an orthogonally adjacent cover neighbor.
 
 ## Debug tools
 
