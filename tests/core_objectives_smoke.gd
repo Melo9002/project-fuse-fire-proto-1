@@ -80,6 +80,7 @@ func _check_rescue() -> void:
 	var approach := target_cell + Vector3i.LEFT
 	var carrier := level.turn_manager.player_units[0]
 	var original_speed := carrier.stats.speed
+	level.battle_controller.grid_manager.update_unit_position(carrier, carrier.grid_position, approach)
 	level.battle_controller.unit_moved.emit(carrier, approach + Vector3i.LEFT, approach)
 	check(level.objective_manager.get_objective(&"rescue").is_completed(), "Rescue completes beside its neutral target")
 	check(carrier.is_carrying_unit() and carrier.stats.speed == original_speed - 2, "The rescuer carries the VIP with reduced movement")

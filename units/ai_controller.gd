@@ -15,6 +15,7 @@ var current_mission_intent := MissionIntentData.new()
 enum MissionStepResult {
 	NONE,
 	MOVED,
+	INTERACTED,
 	EXTRACTED,
 }
 
@@ -82,6 +83,8 @@ func _execute_turn() -> void:
 		if mission_step == MissionStepResult.MOVED:
 			has_moved = true
 			continue
+		if mission_step == MissionStepResult.INTERACTED:
+			continue
 		var attack_target = _find_attack_target()
 		if attack_target and battle_controller.try_attack(unit, attack_target):
 			battle_controller.record_ai_decision(unit, "Attack", attack_target.name, "Legal shot; target has the lowest HP among legal targets.", "Move, Defend", current_mission_intent.get_debug_label())
@@ -106,6 +109,22 @@ func _execute_turn() -> void:
 
 func _try_mission_step(has_moved: bool) -> MissionStepResult:
 	if not current_mission_intent.is_actionable():
+		return MissionStepResult.NONE
+	if current_mission_intent.kind == MissionIntentData.Kind.RESCUE:
+		var rescue_target := _objective_manager.find_mission_actor(current_mission_intent.target_ids)
+		if rescue_target and _objective_manager.can_rescue(unit, rescue_target):
+			battle_controller.record_ai_decision(unit, "Rescue", rescue_target.name, "Rescue target is adjacent.", "Attack, Move, Defend", current_mission_intent.get_debug_label())
+			if _objective_manager.try_rescue(unit, rescue_target):
+				return MissionStepResult.INTERACTED
+		if not has_moved and rescue_target and await _move_toward(rescue_target):
+			battle_controller.record_ai_decision(unit, "Move", str(_last_move_destination), "Approached the rescue target.", "Attack, Defend", current_mission_intent.get_debug_label())
+			return MissionStepResult.MOVED
+		return MissionStepResult.NONE
+	if current_mission_intent.kind == MissionIntentData.Kind.PROTECT:
+		var protected_actor := _objective_manager.find_mission_actor(current_mission_intent.target_ids)
+		if not has_moved and protected_actor and _grid_distance_to(protected_actor) > 3 and await _move_toward_range(protected_actor, 3):
+			battle_controller.record_ai_decision(unit, "Move", str(_last_move_destination), "Returned to the protected actor's escort radius.", "Attack, Defend", current_mission_intent.get_debug_label())
+			return MissionStepResult.MOVED
 		return MissionStepResult.NONE
 	if current_mission_intent.kind == MissionIntentData.Kind.EXTRACT and _objective_manager.can_extract(unit):
 		battle_controller.record_ai_decision(unit, "Extract", current_mission_intent.zone_id, "Unit reached its mission extraction zone.", "Attack, Move, Defend", current_mission_intent.get_debug_label())
@@ -167,14 +186,18 @@ func _execute_vip_turn() -> void:
 		turn_manager.end_current_turn()
 
 func _move_toward(target: TacticalUnit) -> bool:
+	return await _move_toward_range(target, 1)
+
+func _move_toward_range(target: TacticalUnit, desired_distance: int) -> bool:
 	var start_cell = battle_controller.grid_manager.get_unit_grid(unit)
 	var target_cell = battle_controller.grid_manager.get_unit_grid(target)
 	var path = battle_controller.pathfinder.calculate_3d_path(start_cell, target_cell)
 	if path.size() <= 1:
 		return false
 
-	# Choose the farthest legal stop along the route.
-	path.remove_at(path.size() - 1)
+	# Leave the requested path distance between the mover and an occupied target.
+	for step in mini(desired_distance, path.size() - 1):
+		path.remove_at(path.size() - 1)
 	var reachable = battle_controller.pathfinder.get_reachable_cells(start_cell, unit.stats.speed)
 	var destination_index = path.size() - 1
 	while destination_index > 0:
@@ -185,6 +208,11 @@ func _move_toward(target: TacticalUnit) -> bool:
 				return true
 		destination_index -= 1
 	return false
+
+func _grid_distance_to(target: TacticalUnit) -> int:
+	var from := battle_controller.grid_manager.get_unit_grid(unit)
+	var to := battle_controller.grid_manager.get_unit_grid(target)
+	return absi(from.x - to.x) + absi(from.y - to.y) + absi(from.z - to.z)
 
 func _move_toward_cell(target_cell: Vector3i) -> bool:
 	var start_cell := battle_controller.grid_manager.get_unit_grid(unit)

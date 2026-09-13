@@ -2,6 +2,7 @@ class_name ObjectiveManager
 extends Node
 
 const MissionIntentData = preload("res://systems/objectives/mission_intent.gd")
+const RescueActionData = preload("res://scripts/actions/rescue_action.gd")
 
 signal mission_loaded(mission: MissionDefinition)
 signal objective_progress_changed(state: MissionObjectiveState)
@@ -153,6 +154,38 @@ func should_seek_extraction(unit: TacticalUnit) -> bool:
 func try_extract(unit: TacticalUnit) -> bool:
 	return ExtractAction.new(unit, self).execute()
 
+func can_rescue(rescuer: TacticalUnit, target: TacticalUnit) -> bool:
+	var rescue := get_objective(&"rescue")
+	if not rescue or not rescue.is_active() or not _grid_manager:
+		return false
+	if not is_instance_valid(rescuer) or not is_instance_valid(target) or rescuer.is_carrying_unit():
+		return false
+	if not rescue.definition.is_pursued_by(rescuer.faction) or not rescue.definition.target_ids.has(target.get_mission_id()):
+		return false
+	if target.get_mission_actor_kind() != MissionActor.Kind.RESCUABLE:
+		return false
+	return _grid_manager.get_unit_grid(rescuer).distance_to(_grid_manager.get_unit_grid(target)) == 1.0
+
+func try_rescue(rescuer: TacticalUnit, target: TacticalUnit) -> bool:
+	return RescueActionData.new(rescuer, target, self).execute()
+
+func complete_rescue(rescuer: TacticalUnit, target: TacticalUnit) -> bool:
+	if not can_rescue(rescuer, target):
+		return false
+	_grid_manager.unregister_unit_at(_grid_manager.get_unit_grid(target))
+	rescuer.carry_unit(target)
+	complete_objective(&"rescue")
+	return true
+
+func find_mission_actor(target_ids: Array[StringName]) -> TacticalUnit:
+	if not _grid_manager:
+		return null
+	for occupied in _grid_manager.occupancy_map:
+		var candidate := _grid_manager.get_unit_at(occupied)
+		if is_instance_valid(candidate) and target_ids.has(candidate.get_mission_id()):
+			return candidate
+	return null
+
 func complete_extraction(unit: TacticalUnit) -> bool:
 	if not can_extract(unit): return false
 	if unit.is_carrying_unit():
@@ -214,12 +247,9 @@ func _on_unit_moved(unit: TacticalUnit, _from: Vector3i, to: Vector3i) -> void:
 	if reach and reach.is_active() and unit.faction in [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ALLY] and _grid_manager.map_data.get_objective_zone(&"reach").has(to):
 		complete_objective(&"reach")
 	var rescue := get_objective(&"rescue")
-	if rescue and rescue.is_active() and unit.faction == TacticalUnit.Faction.PLAYER:
+	if rescue and rescue.is_active() and rescue.definition.is_pursued_by(unit.faction):
 		var target := _adjacent_target(to, rescue.definition.target_ids)
-		if target:
-			_grid_manager.unregister_unit_at(_grid_manager.get_unit_grid(target))
-			unit.carry_unit(target)
-			complete_objective(&"rescue")
+		if target: try_rescue(unit, target)
 
 func _adjacent_target(cell: Vector3i, ids: Array[StringName]) -> TacticalUnit:
 	for occupied in _grid_manager.occupancy_map:

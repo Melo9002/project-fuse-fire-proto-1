@@ -88,6 +88,8 @@ Rounds proceed through `PLAYER_TURN → ALLY_TURN → ENEMY_TURN`; an empty alli
 
 Reach and Extract intents are executable AI goals. `AIController` compares every eligible zone cell by reachable path length, advances once toward the best route, and then retains any remaining AP for combat. An eligible unit already in extraction, including one with zero AP, calls `ObjectiveManager.try_extract()` and therefore the shared `ExtractAction`. Roster removal decides whether another automated player activates or the allied queue advances, avoiding a second phase transition from the AI controller.
 
+Protect and Rescue intents are executable AI goals as well. A protecting combatant returns to a three-cell escort radius when separated, then uses ordinary combat logic while nearby. A rescuer pathfinds to an adjacent cell and calls `ObjectiveManager.try_rescue()` through the zero-AP `RescueAction`; manual movement-triggered pickup uses that same gateway. The rescued actor is removed from grid occupancy and attached to the carrier's existing carried-unit state, which reduces movement speed. Completion exposes the Extract intent, so the carrier uses the normal objective route and `ExtractAction` to evacuate both actors.
+
 ## Battlefield validation
 
 After authored geometry has become `MapData`, `BattleController` asks `MapValidator` to inspect it before registering units or starting turns. Validation is read-only and returns a `MapValidationResult` containing structured `MapValidationIssue` records. Each issue has a stable code, readable message, and an optional grid coordinate.
