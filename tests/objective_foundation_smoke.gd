@@ -52,9 +52,26 @@ func _run() -> void:
 
 	var setup := load("res://ui/match_setup.tscn").instantiate() as MatchSetup
 	root.add_child(setup)
+	await process_frame
 	var objective_option := setup.get_node("CenterContainer/Panel/Margin/VBox/ObjectiveSetup").get_child(1) as OptionButton
+	var setup_panel := setup.get_node("CenterContainer/Panel") as PanelContainer
+	check(setup_panel.global_position.y >= 0.0 and setup_panel.global_position.y + setup_panel.size.y <= setup.size.y, "Match setup fits inside the 720p reference viewport")
+	check(setup.auto_seed_toggle.button_pressed and setup.seed_input.value >= 1, "A fresh setup prepares a valid automatic seed")
+	setup.generated_map_toggle.button_pressed = true
+	setup.auto_seed_toggle.button_pressed = false
+	setup.seed_input.value = 4242
+	check(setup.seed_input.editable and int(setup.seed_input.value) == 4242, "Manual seed mode accepts a reproducible seed")
+	setup.auto_seed_toggle.button_pressed = true
+	check(not setup.seed_input.editable and setup.seed_input.value >= 1, "Automatic seed mode locks the generated value")
 	check(objective_option.item_count == MissionCatalog.PRESETS.size(), "Match setup offers every objective preset")
 	check(objective_option.get_item_text(MissionObjectiveDefinition.Kind.EXTRACT) == "Extract", "Objective choices retain their readable names")
+	setup.vip_toggle.button_pressed = true
+	setup.vip_behavior.select(MissionActor.VIPBehavior.PLAYER_CONTROLLED)
+	setup._update_summary(0.0)
+	check(setup.deployment_summary.text.contains("Player-controlled: 3 | AI allies: 0 | Enemies: 2"), "Setup summary counts a player-controlled VIP separately from combatants")
+	setup.vip_behavior.select(MissionActor.VIPBehavior.FOLLOW_ESCORT)
+	setup._update_summary(0.0)
+	check(setup.deployment_summary.text.contains("Player-controlled: 2 | AI allies: 1 | Enemies: 2"), "Setup summary follows the selected VIP controller")
 	setup.queue_free()
 	await process_frame
 

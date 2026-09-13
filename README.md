@@ -6,7 +6,13 @@ A 3D tactical combat prototype made in Godot 4.7. Choose independent player and 
 
 Import `project.godot` in Godot and press **F5**.
 
-The match setup screen accepts 1–5 player units and 1–5 enemy units and lets you select a prototype mission objective. The battlefield spawns units from reusable marker-based spawn zones; team sizes do not need to match.
+The UI uses 1280×720 as its reference resolution and scales to standard 1080p and 1440p displays through Godot's canvas-item stretch mode.
+
+During battle, press **Esc** to pause and open Resume or Return to Match Setup. Returning creates a fresh setup screen without retaining the current battle. Press **F3** separately to open the debug tools.
+
+The match setup screen accepts 1–5 player combatants and 1–5 enemy combatants and lets you select a prototype mission objective. AI allied combatants and an optional additional VIP are configured separately. A live deployment summary shows which actors are player-controlled or AI-controlled before battle. The battlefield spawns units from reusable marker-based spawn zones; team sizes do not need to match.
+
+Generated maps prepare a fresh visible seed whenever a new match setup opens. Disable **Automatic New Seed** to unlock the seed field and reproduce a previous battlefield exactly; the map generator log also records the seed used.
 
 During battle, the bottom portrait bar mirrors the friendly roster. Each Bean card shows HP, AP, and its selected, ready, exhausted, or dead state. Clicking a ready portrait selects the same unit in the battlefield.
 
@@ -63,6 +69,7 @@ godot_console --headless --path . --script res://tests/map_validation_smoke.gd
 godot_console --headless --path . --script res://tests/flat_map_generator_smoke.gd
 godot_console --headless --path . --script res://tests/objective_foundation_smoke.gd
 godot_console --headless --path . --script res://tests/core_objectives_smoke.gd
+godot_console --headless --path . --script res://tests/battle_pause_menu_smoke.gd
 ```
 
 The smoke tests load the real battle scene and check terrain data, shared player/AI action validation, movement, AP, attacks, walls, defense, enemy turns, selection UI, and defeat cleanup. Play the scene to check appearance and combat feel.

@@ -41,7 +41,10 @@ func _process(_delta: float) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not debug_tools_enabled or not event.pressed or event.echo:
 		return
-	if event.keycode == KEY_F3 or event.keycode == KEY_ESCAPE:
+	if event.keycode == KEY_F3:
+		var pause_menu := get_tree().get_first_node_in_group("battle_pause_menu") as BattlePauseMenu
+		if pause_menu and pause_menu.is_open:
+			return
 		set_panel_open(not panel_open)
 		get_viewport().set_input_as_handled()
 
@@ -78,7 +81,7 @@ func _build_interface() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_hint = Label.new()
 	_hint.name = "DebugHint"
-	_hint.text = "DEBUG  [F3 / Esc]"
+	_hint.text = "DEBUG  [F3]"
 	_hint.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_hint.position = Vector2(-145, 12)
 	_hint.add_theme_color_override("font_color", Color(0.45, 1.0, 0.75))
@@ -133,7 +136,7 @@ func _build_interface() -> void:
 	content.add_child(title)
 
 	var help := Label.new()
-	help.text = "F3 / Esc  toggle panel and pause"
+	help.text = "F3 — toggle panel and pause"
 	content.add_child(help)
 
 	_overlay_toggle = CheckButton.new()

@@ -27,6 +27,7 @@
 [ext_resource type="Script" path="res://systems/objectives/objective_manager.gd" id="28_objectives"]
 [ext_resource type="Script" path="res://visualizers/objective_zone_visualizer.gd" id="29_objective_zones"]
 [ext_resource type="Script" path="res://ui/objective_hud.gd" id="30_objective_hud"]
+[ext_resource type="Script" path="res://ui/battle_pause_menu.gd" id="31_pause_menu"]
 
 [sub_resource type="Environment" id="Environment_8x357"]
 background_mode = 1
@@ -823,3 +824,14 @@ script = ExtResource("26_debug_tools")
 battle_controller = NodePath("../../../Systems/BattleController")
 turn_manager = NodePath("../../../Systems/TurnManager")
 grid_manager = NodePath("../../../Systems/GridManager")
+
+[node name="BattlePauseMenu" type="Control" parent="Visualizers/BattleUI" node_paths=PackedStringArray("debug_tools")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("31_pause_menu")
+debug_tools = NodePath("../DebugTools")

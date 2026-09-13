@@ -6,16 +6,22 @@ extends Control
 @export var ally_count: SpinBox
 @export var start_button: Button
 @export var generated_map_toggle: CheckButton
+@export var auto_seed_toggle: CheckButton
 @export var seed_input: SpinBox
 @export var map_size_option: OptionButton
 @export var battle_scene: PackedScene
 var vip_toggle: CheckButton
 var vip_behavior: OptionButton
 var objective_option: OptionButton
+var deployment_summary: Label
+var _seed_rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_build_vip_setup()
 	_build_objective_setup()
+	_build_deployment_summary()
+	_seed_rng.randomize()
+	_prepare_new_seed()
 	var size_names := ["Small", "Medium", "Large"]
 	for index in FlatMapGenerator.MAP_SIZES.size():
 		var dimensions := FlatMapGenerator.MAP_SIZES[index]
@@ -27,16 +33,19 @@ func _ready() -> void:
 	enemy_count.value_changed.connect(_update_summary)
 	ally_count.value_changed.connect(_update_summary)
 	generated_map_toggle.toggled.connect(_on_generation_toggled)
+	auto_seed_toggle.toggled.connect(_on_auto_seed_toggled)
 	seed_input.value_changed.connect(_update_summary)
-	seed_input.editable = generated_map_toggle.button_pressed
+	_refresh_seed_controls()
 	_update_summary(0.0)
 
 func _build_vip_setup() -> void:
 	var box := VBoxContainer.new()
 	box.name = "VIPSetup"
 	vip_toggle = CheckButton.new()
-	vip_toggle.text = "INCLUDE FRIENDLY VIP"
+	vip_toggle.text = "INCLUDE ADDITIONAL FRIENDLY VIP"
+	vip_toggle.tooltip_text = "Adds one mission actor outside the combatant counters."
 	vip_behavior = OptionButton.new()
+	vip_behavior.tooltip_text = "Choose who controls the additional VIP."
 	for label in ["Player Controlled", "Follow Escort", "Hold Position"]:
 		vip_behavior.add_item(label)
 	vip_behavior.disabled = true
@@ -49,6 +58,7 @@ func _build_vip_setup() -> void:
 	vip_behavior.item_selected.connect(func(_index: int):
 		if vip_toggle.button_pressed and vip_behavior.selected != MissionActor.VIPBehavior.PLAYER_CONTROLLED and player_count.value < 2:
 			player_count.value = 2
+		_update_summary(0.0)
 	)
 	box.add_child(vip_toggle)
 	box.add_child(vip_behavior)
@@ -70,6 +80,15 @@ func _build_objective_setup() -> void:
 	$CenterContainer/Panel/Margin/VBox.add_child(box)
 	$CenterContainer/Panel/Margin/VBox.move_child(box, 4)
 
+func _build_deployment_summary() -> void:
+	deployment_summary = Label.new()
+	deployment_summary.name = "DeploymentSummary"
+	deployment_summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	deployment_summary.add_theme_color_override("font_color", Color(0.55, 0.86, 1.0))
+	var box := $CenterContainer/Panel/Margin/VBox
+	box.add_child(deployment_summary)
+	box.move_child(deployment_summary, box.get_child_count() - 2)
+
 func _on_objective_selected(index: int) -> void:
 	var needs_vip := index == MissionObjectiveDefinition.Kind.PROTECT
 	vip_toggle.disabled = needs_vip
@@ -79,14 +98,34 @@ func _on_objective_selected(index: int) -> void:
 
 func _update_summary(_value: float) -> void:
 	var map_label := "GENERATED" if generated_map_toggle.button_pressed else "HANDMADE"
-	var vip_label := " + VIP" if vip_toggle and vip_toggle.button_pressed else ""
 	var objective_label := MissionCatalog.get_preset_names()[objective_option.selected] if objective_option else "Eliminate"
-	start_button.text = "START %d%s + %d ALLIES VS %d — %s — %s" % [int(player_count.value), vip_label, int(ally_count.value), int(enemy_count.value), map_label, objective_label.to_upper()]
+	var has_vip := vip_toggle != null and vip_toggle.button_pressed
+	var player_vip := 1 if has_vip and vip_behavior.selected == MissionActor.VIPBehavior.PLAYER_CONTROLLED else 0
+	var ai_vip := 1 if has_vip and vip_behavior.selected != MissionActor.VIPBehavior.PLAYER_CONTROLLED else 0
+	var player_controlled := int(player_count.value) + player_vip
+	var ai_controlled := int(ally_count.value) + ai_vip
+	var friendly_total := player_controlled + ai_controlled
+	if deployment_summary:
+		deployment_summary.text = "DEPLOYMENT — Player-controlled: %d | AI allies: %d | Enemies: %d\nTotal friendly actors: %d%s" % [player_controlled, ai_controlled, int(enemy_count.value), friendly_total, " (includes 1 additional VIP)" if has_vip else ""]
+	start_button.text = "START %d FRIENDLY VS %d ENEMIES — %s — %s" % [friendly_total, int(enemy_count.value), map_label, objective_label.to_upper()]
 
 func _on_generation_toggled(enabled: bool) -> void:
 	map_size_option.disabled = not enabled
-	seed_input.editable = enabled
+	_refresh_seed_controls()
 	_update_summary(0.0)
+
+func _on_auto_seed_toggled(enabled: bool) -> void:
+	if enabled:
+		_prepare_new_seed()
+	_refresh_seed_controls()
+
+func _prepare_new_seed() -> void:
+	seed_input.value = _seed_rng.randi_range(1, int(seed_input.max_value))
+
+
+func _refresh_seed_controls() -> void:
+	auto_seed_toggle.disabled = not generated_map_toggle.button_pressed
+	seed_input.editable = generated_map_toggle.button_pressed and not auto_seed_toggle.button_pressed
 
 func _start_battle() -> void:
 	var battle = battle_scene.instantiate() as BattleLevel

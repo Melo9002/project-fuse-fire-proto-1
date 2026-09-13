@@ -95,7 +95,7 @@ func _spawn_rescue_target() -> void:
 	unit.global_position = grid.grid_to_world(spawn_cell) + Vector3.UP * unit.standing_height
 	battle_controller.register_mission_unit(unit, spawn_cell)
 
-func _spawn_team(count: int, zone: SpawnZone, parent: Node3D, add_ai: bool) -> void:
+func _spawn_team(count: int, zone: SpawnZone, parent: Node3D, _add_ai: bool) -> void:
 	if not unit_scene or not zone or not parent or not turn_manager:
 		push_error("BattleLevel: missing unit-spawning dependencies")
 		return

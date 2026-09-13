@@ -15,7 +15,7 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
-[node name="MatchSetup" type="Control" node_paths=PackedStringArray("player_count", "enemy_count", "ally_count", "start_button", "generated_map_toggle", "seed_input", "map_size_option")]
+[node name="MatchSetup" type="Control" node_paths=PackedStringArray("player_count", "enemy_count", "ally_count", "start_button", "generated_map_toggle", "auto_seed_toggle", "seed_input", "map_size_option")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -28,6 +28,7 @@ enemy_count = NodePath("CenterContainer/Panel/Margin/VBox/Teams/EnemySide/EnemyC
 ally_count = NodePath("CenterContainer/Panel/Margin/VBox/Teams/AllySide/AllyCount")
 start_button = NodePath("CenterContainer/Panel/Margin/VBox/StartButton")
 generated_map_toggle = NodePath("CenterContainer/Panel/Margin/VBox/Generation/GeneratedMapToggle")
+auto_seed_toggle = NodePath("CenterContainer/Panel/Margin/VBox/Generation/AutoSeedToggle")
 seed_input = NodePath("CenterContainer/Panel/Margin/VBox/Generation/SeedInput")
 map_size_option = NodePath("CenterContainer/Panel/Margin/VBox/Generation/MapSize")
 battle_scene = ExtResource("2_battle")
@@ -58,13 +59,13 @@ theme_override_styles/panel = SubResource("Style_panel")
 [node name="Margin" type="MarginContainer" parent="CenterContainer/Panel"]
 layout_mode = 2
 theme_override_constants/margin_left = 42
-theme_override_constants/margin_top = 32
+theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 42
-theme_override_constants/margin_bottom = 32
+theme_override_constants/margin_bottom = 20
 
 [node name="VBox" type="VBoxContainer" parent="CenterContainer/Panel/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 12
 
 [node name="Title" type="Label" parent="CenterContainer/Panel/Margin/VBox"]
 layout_mode = 2
@@ -74,7 +75,7 @@ horizontal_alignment = 1
 
 [node name="Subtitle" type="Label" parent="CenterContainer/Panel/Margin/VBox"]
 layout_mode = 2
-text = "Choose each force independently"
+text = "Choose combatants and mission actors independently"
 horizontal_alignment = 1
 modulate = Color(0.7, 0.78, 0.86, 1)
 
@@ -88,7 +89,7 @@ layout_mode = 2
 
 [node name="PlayerLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/Teams/PlayerSide"]
 layout_mode = 2
-text = "PLAYER UNITS"
+text = "PLAYER COMBATANTS"
 horizontal_alignment = 1
 
 [node name="PlayerCount" type="SpinBox" parent="CenterContainer/Panel/Margin/VBox/Teams/PlayerSide"]
@@ -105,7 +106,7 @@ layout_mode = 2
 
 [node name="EnemyLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/Teams/EnemySide"]
 layout_mode = 2
-text = "ENEMY UNITS"
+text = "ENEMY COMBATANTS"
 horizontal_alignment = 1
 
 [node name="EnemyCount" type="SpinBox" parent="CenterContainer/Panel/Margin/VBox/Teams/EnemySide"]
@@ -122,7 +123,7 @@ layout_mode = 2
 
 [node name="AllyLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/Teams/AllySide"]
 layout_mode = 2
-text = "AI ALLIES"
+text = "AI ALLIED COMBATANTS"
 horizontal_alignment = 1
 
 [node name="AllyCount" type="SpinBox" parent="CenterContainer/Panel/Margin/VBox/Teams/AllySide"]
@@ -140,9 +141,15 @@ theme_override_constants/separation = 6
 layout_mode = 2
 text = "USE GENERATED MAP"
 
+[node name="AutoSeedToggle" type="CheckButton" parent="CenterContainer/Panel/Margin/VBox/Generation"]
+layout_mode = 2
+tooltip_text = "Prepare a fresh visible seed whenever this setup screen opens. Disable to reproduce a specific map."
+button_pressed = true
+text = "AUTOMATIC NEW SEED"
+
 [node name="SeedLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/Generation"]
 layout_mode = 2
-text = "GENERATION SEED"
+text = "NEXT GENERATION SEED"
 
 [node name="MapSize" type="OptionButton" parent="CenterContainer/Panel/Margin/VBox/Generation"]
 layout_mode = 2

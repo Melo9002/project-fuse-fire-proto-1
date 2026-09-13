@@ -93,14 +93,14 @@ func has_required_objective_failed() -> bool:
 	return false
 
 func can_extract(unit: TacticalUnit) -> bool:
-	if not is_instance_valid(unit) or unit.is_moving or not _turn_manager or not _grid_manager: return false
+	if not mission or not is_instance_valid(unit) or unit.is_moving or not _turn_manager or not _grid_manager: return false
 	if not _turn_manager.player_units.has(unit) and not _turn_manager.allied_units.has(unit): return false
 	if not _grid_manager.map_data.get_objective_zone(&"extract").has(_grid_manager.get_unit_grid(unit)): return false
 	if mission.mission_id == &"prototype_survive" and not get_objective(&"survive").is_completed(): return false
 	return _has_extract_target(unit)
 
 func should_seek_extraction(unit: TacticalUnit) -> bool:
-	if not is_instance_valid(unit) or unit.faction not in [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ALLY]: return false
+	if not mission or not is_instance_valid(unit) or unit.faction not in [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ALLY]: return false
 	if not _has_extract_target(unit): return false
 	return mission.mission_id != &"prototype_survive" or get_objective(&"survive").is_completed()
 
