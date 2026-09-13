@@ -44,6 +44,9 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 | `UnitAction` subclasses | Resource validation and action effects | Changing costs or effects |
 | `UnitStats` | HP, AP, defense, defeat signals | Changing health or resource rules |
 | `MissionActor` | Stable mission identity, actor role, and extraction capability | Defining who objectives refer to |
+| `MissionDefinition` / `MissionObjectiveDefinition` | Saved mission and objective design data | Declaring objectives, targets, requirements, and progress totals |
+| `MissionObjectiveState` | Runtime progress and active/completed/failed status | Reading what happened to one objective during a battle |
+| `ObjectiveManager` | Creates objective state, applies updates, and emits objective signals | Connecting future mission events and UI to objective progress |
 | `TacticalUnit` | Path animation, defeat relay, health-display creation | Changing unit movement or presentation |
 | `AIController` | Chooses among legal attacks, movement, and defense | Changing enemy priorities or difficulty |
 | UI and visualizers | Display state and forward input | Changing feedback and presentation |
@@ -62,9 +65,21 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 
 ## Mission actors
 
-Faction answers who a unit considers hostile. `MissionActor` separately records what that unit means to a mission. Its `Kind` distinguishes combatants, VIPs, and rescuable actors, while `extraction_capable` describes a capability that any appropriate actor may have. Every spawned unit receives a stable mission ID derived from its unique battle name. Current Beans default to combatants, so adding this metadata does not change turns, AI, targeting, or elimination victory. The future objective system can refer to mission IDs and roles without encoding mission logic in factions or unit names.
+Faction answers who a unit considers hostile. `MissionActor` separately records what that unit means to a mission. Its `Kind` distinguishes combatants, VIPs, and rescuable actors, while `extraction_capable` describes a capability that any appropriate actor may have. Every spawned unit receives a stable mission ID derived from its unique battle name. Objective definitions refer to those IDs and roles without encoding mission logic in factions or unit names.
 
 Unit coordinates do not live in spawning code. Handmade `SpawnZone` markers are converted into faction-keyed cells inside `MapData`; a future generator can supply the same data without scene markers. `BattleLevel` still uses authored transforms to instantiate the current Beans, while map validation uses the reusable cell representation.
+
+## Objective foundation
+
+Objectives use three layers. `MissionObjectiveDefinition` and `MissionDefinition` are Resources containing reusable design data. `MissionObjectiveState` holds the mutable progress and status for one battle. `ObjectiveManager` builds those states, rejects malformed IDs, exposes progress/complete/fail commands, and announces changes through signals so later UI does not need to own mission rules.
+
+`ObjectiveManager` observes the controller's completed movement and defeat events plus the turn manager's round events. It translates them into eliminate, protect, rescue, reach, survive, and extract state changes, then resolves the mission from its required objectives. It never performs combat or movement itself; it requests extraction through `BattleController` and reports the final result through `TurnManager`.
+
+`MissionCatalog` supplies the six prototype presets shown by match setup. The menu creates the chosen Resource and passes it through `BattleLevel.configure()`; the level loads it into `ObjectiveManager` before map construction. The manager logs the active definitions and every later state change.
+
+Reach and extraction areas are arrays of grid coordinates stored in `MapData`. `MissionZonePlanner` currently chooses valid central cells for both authored and generated maps, and `ObjectiveZoneVisualizer` only presents those authoritative coordinates. Rescue adds a neutral, non-turn-taking mission actor on another valid cell. This keeps spatial objective rules independent from meshes, node names, and map source.
+
+`ObjectiveHUD` mirrors every objective state in the top-right display and exposes early mission completion when its rules permit it. Extraction is an explicit interaction: `UnitWorldBar` shows its button only for the active player-controlled unit standing inside the extraction cells, then asks `ObjectiveManager` to validate and evacuate it. Automated allies use the same validation before seeking or leaving through the zone.
 
 Rounds proceed through `PLAYER_TURN → ALLY_TURN → ENEMY_TURN`; an empty allied roster skips its phase. Allied units are autonomous, use the same `AIController` and action gateways as enemies, remain outside player selection, and share player hostility rules. They do not prevent defeat when every player-controlled unit is lost.
 

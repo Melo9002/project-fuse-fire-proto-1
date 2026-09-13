@@ -20,6 +20,7 @@ var active_unit: TacticalUnit
 var active_unit_index: int = 0
 var current_round: int = 0
 var battle_result: BattleResult = BattleResult.ONGOING
+var automatic_annihilation_results := true
 
 func start_battle() -> void:
 	battle_result = BattleResult.ONGOING
@@ -92,6 +93,24 @@ func remove_unit(unit: TacticalUnit) -> void:
 		active_unit = null
 	_check_battle_result()
 
+func remove_extracted_unit(unit: TacticalUnit) -> void:
+	var was_active := active_unit == unit
+	var was_ally := allied_units.has(unit)
+	player_units.erase(unit)
+	allied_units.erase(unit)
+	enemy_units.erase(unit)
+	if not was_active:
+		return
+	active_unit = null
+	if current_phase == TurnPhase.PLAYER_TURN:
+		for candidate in player_units:
+			if is_instance_valid(candidate) and candidate.stats.current_ap > 0:
+				_set_active_unit(candidate)
+				return
+		player_actions_exhausted.emit()
+	elif current_phase == TurnPhase.ALLY_TURN and was_ally:
+		active_unit_index -= 1
+
 func is_any_unit_moving() -> bool:
 	for unit in player_units + allied_units + enemy_units:
 		if is_instance_valid(unit) and unit.is_moving:
@@ -120,12 +139,16 @@ func _advance_selection_if_needed(exhausted_unit: TacticalUnit) -> void:
 	player_actions_exhausted.emit()
 
 func _check_battle_result() -> void:
-	if battle_result != BattleResult.ONGOING:
+	if battle_result != BattleResult.ONGOING or not automatic_annihilation_results:
 		return
 	if enemy_units.is_empty():
 		_finish_battle(BattleResult.VICTORY)
 	elif player_units.is_empty():
 		_finish_battle(BattleResult.DEFEAT)
+
+func finish_battle(result: BattleResult) -> void:
+	if battle_result == BattleResult.ONGOING:
+		_finish_battle(result)
 
 func _finish_battle(result: BattleResult) -> void:
 	battle_result = result

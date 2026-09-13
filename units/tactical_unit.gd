@@ -18,6 +18,20 @@ var current_path: PackedVector3Array = PackedVector3Array()
 var grid_position: Vector3i = Vector3i.ZERO
 var current_waypoint_idx: int = 0
 var is_moving: bool = false
+var carried_unit: TacticalUnit
+var _movement_speed_before_carry := -1
+
+func carry_unit(unit: TacticalUnit) -> void:
+	if not is_instance_valid(unit) or carried_unit != null:
+		return
+	carried_unit = unit
+	_movement_speed_before_carry = stats.speed
+	stats.speed = maxi(2, stats.speed - 2)
+	unit.visible = false
+	unit.process_mode = Node.PROCESS_MODE_DISABLED
+
+func is_carrying_unit() -> bool:
+	return is_instance_valid(carried_unit)
 
 func get_mission_id() -> StringName:
 	return mission_actor.mission_id if mission_actor else StringName(name)

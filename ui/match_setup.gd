@@ -11,9 +11,11 @@ extends Control
 @export var battle_scene: PackedScene
 var vip_toggle: CheckButton
 var vip_behavior: OptionButton
+var objective_option: OptionButton
 
 func _ready() -> void:
 	_build_vip_setup()
+	_build_objective_setup()
 	var size_names := ["Small", "Medium", "Large"]
 	for index in FlatMapGenerator.MAP_SIZES.size():
 		var dimensions := FlatMapGenerator.MAP_SIZES[index]
@@ -53,10 +55,35 @@ func _build_vip_setup() -> void:
 	$CenterContainer/Panel/Margin/VBox.add_child(box)
 	$CenterContainer/Panel/Margin/VBox.move_child(box, 3)
 
+func _build_objective_setup() -> void:
+	var box := VBoxContainer.new()
+	box.name = "ObjectiveSetup"
+	var label := Label.new()
+	label.text = "MISSION OBJECTIVE"
+	objective_option = OptionButton.new()
+	objective_option.tooltip_text = "Choose the mission rule to test. Objective victory is added in Task 18C."
+	for objective_name in MissionCatalog.get_preset_names():
+		objective_option.add_item(objective_name)
+	objective_option.item_selected.connect(_on_objective_selected)
+	box.add_child(label)
+	box.add_child(objective_option)
+	$CenterContainer/Panel/Margin/VBox.add_child(box)
+	$CenterContainer/Panel/Margin/VBox.move_child(box, 4)
+
+func _on_objective_selected(index: int) -> void:
+	var needs_vip := index == MissionObjectiveDefinition.Kind.PROTECT or index == MissionObjectiveDefinition.Kind.EXTRACT
+	vip_toggle.disabled = needs_vip
+	if needs_vip:
+		vip_toggle.button_pressed = true
+	if index == MissionObjectiveDefinition.Kind.EXTRACT:
+		vip_behavior.select(MissionActor.VIPBehavior.PLAYER_CONTROLLED)
+	_update_summary(0.0)
+
 func _update_summary(_value: float) -> void:
 	var map_label := "GENERATED" if generated_map_toggle.button_pressed else "HANDMADE"
 	var vip_label := " + VIP" if vip_toggle and vip_toggle.button_pressed else ""
-	start_button.text = "START %d%s + %d ALLIES VS %d — %s" % [int(player_count.value), vip_label, int(ally_count.value), int(enemy_count.value), map_label]
+	var objective_label := MissionCatalog.get_preset_names()[objective_option.selected] if objective_option else "Eliminate"
+	start_button.text = "START %d%s + %d ALLIES VS %d — %s — %s" % [int(player_count.value), vip_label, int(ally_count.value), int(enemy_count.value), map_label, objective_label.to_upper()]
 
 func _on_generation_toggled(enabled: bool) -> void:
 	map_size_option.disabled = not enabled
@@ -73,7 +100,8 @@ func _start_battle() -> void:
 		int(ally_count.value),
 		FlatMapGenerator.MAP_SIZES[map_size_option.selected],
 		vip_toggle.button_pressed,
-		vip_behavior.selected
+		vip_behavior.selected,
+		MissionCatalog.create_mission(objective_option.selected, int(enemy_count.value))
 	)
 	get_tree().root.add_child(battle)
 	get_tree().current_scene = battle

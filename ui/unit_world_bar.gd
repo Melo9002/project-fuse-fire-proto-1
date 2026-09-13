@@ -4,6 +4,8 @@ extends Control
 @export_group("UI References")
 @export var hp_bar: ProgressBar
 @export var ap_label: Label
+@export var carry_label: Label
+@export var extract_button: Button
 
 @export_group("3D Tracking Settings")
 @export var world_offset: Vector3 = Vector3(0, 2.2, 0)
@@ -11,11 +13,22 @@ extends Control
 var _target_unit: Node3D
 var _stats: UnitStats
 var _active_camera: Camera3D
+var _objective_manager: ObjectiveManager
+var _turn_manager: TurnManager
 
 ## Project the unit's world position into the UI layer each frame.
 func setup(unit: Node3D, stats: UnitStats, faction: int = 0) -> void:
 	_target_unit = unit
 	_stats = stats
+	_objective_manager = get_tree().get_first_node_in_group("objective_manager") as ObjectiveManager
+	_turn_manager = get_tree().get_first_node_in_group("turn_manager") as TurnManager
+	if extract_button and not extract_button.pressed.is_connected(_on_extract_pressed):
+		extract_button.pressed.connect(_on_extract_pressed)
+	if _turn_manager and not _turn_manager.active_unit_changed.is_connected(_on_active_unit_changed):
+		_turn_manager.active_unit_changed.connect(_on_active_unit_changed)
+	if _objective_manager:
+		_objective_manager.objective_completed.connect(_on_objective_changed)
+		_objective_manager.objective_failed.connect(_on_objective_changed)
 
 	_apply_faction_style(faction)
 
@@ -27,10 +40,14 @@ func setup(unit: Node3D, stats: UnitStats, faction: int = 0) -> void:
 
 		_on_hp_changed(_stats.current_hp, _stats.max_hp)
 		_on_ap_changed(_stats.current_ap, _stats.max_ap)
+	_refresh_extract_button()
 
 func _process(_delta: float) -> void:
 	if not is_instance_valid(_target_unit):
 		queue_free()
+		return
+	if not _target_unit.visible:
+		hide()
 		return
 
 	if not is_instance_valid(_active_camera):
@@ -46,6 +63,8 @@ func _process(_delta: float) -> void:
 		show()
 		var screen_pos = _active_camera.unproject_position(target_world_pos)
 		global_position = screen_pos - (size * 0.5)
+	_refresh_extract_button()
+	_refresh_carry_label()
 
 func _apply_faction_style(faction_id: int) -> void:
 	var team_color: Color
@@ -75,3 +94,24 @@ func _on_hp_changed(current: int, max_val: int) -> void:
 func _on_ap_changed(current: int, max_val: int) -> void:
 	if ap_label:
 		ap_label.text = "%d/%d AP" % [current, max_val]
+
+func _on_active_unit_changed(_unit: TacticalUnit) -> void:
+	_refresh_extract_button()
+
+func _on_objective_changed(_state: MissionObjectiveState) -> void:
+	_refresh_extract_button()
+
+func _on_extract_pressed() -> void:
+	if _objective_manager and is_instance_valid(_target_unit) and _target_unit is TacticalUnit:
+		_objective_manager.try_extract(_target_unit as TacticalUnit)
+	_refresh_extract_button()
+
+func _refresh_extract_button() -> void:
+	if extract_button:
+		extract_button.visible = _objective_manager != null and is_instance_valid(_target_unit) and _target_unit is TacticalUnit \
+			and _turn_manager != null and _turn_manager.player_units.has(_target_unit) \
+			and _objective_manager.can_extract(_target_unit as TacticalUnit)
+
+func _refresh_carry_label() -> void:
+	if carry_label:
+		carry_label.visible = _target_unit is TacticalUnit and (_target_unit as TacticalUnit).is_carrying_unit()

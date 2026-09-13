@@ -3,6 +3,7 @@ class_name TurnHUDController
 
 @export var turn_manager: TurnManager
 @export var battle_controller: BattleController
+@export var objective_manager: ObjectiveManager
 @export var turn_label: Label
 @export var end_turn_button: Button
 
@@ -60,6 +61,8 @@ func _on_battle_ended(result: TurnManager.BattleResult) -> void:
 	else:
 		turn_label.text = "DEFEAT"
 		turn_label.modulate = Color.RED
+	if objective_manager and objective_manager.mission:
+		turn_label.text += "\n" + objective_manager.get_result_report()
 
 func _on_player_actions_exhausted() -> void:
 	end_turn_button.text = "END TURN — NO AP"

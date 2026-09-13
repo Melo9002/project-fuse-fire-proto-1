@@ -1,0 +1,19 @@
+class_name MissionObjectiveDefinition
+extends Resource
+
+enum Kind {
+	ELIMINATE,
+	PROTECT,
+	RESCUE,
+	REACH,
+	SURVIVE,
+	EXTRACT,
+}
+
+@export var objective_id: StringName
+@export var kind: Kind = Kind.ELIMINATE
+@export var title := "Objective"
+@export_multiline var description := ""
+@export var required := true
+@export_range(1, 999, 1) var target_amount := 1
+@export var target_ids: Array[StringName] = []

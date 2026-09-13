@@ -6,7 +6,7 @@ A 3D tactical combat prototype made in Godot 4.7. Choose independent player and 
 
 Import `project.godot` in Godot and press **F5**.
 
-The match setup screen accepts 1–5 player units and 1–5 enemy units. The battlefield spawns them from reusable marker-based spawn zones; team sizes do not need to match.
+The match setup screen accepts 1–5 player units and 1–5 enemy units and lets you select a prototype mission objective. The battlefield spawns units from reusable marker-based spawn zones; team sizes do not need to match.
 
 During battle, the bottom portrait bar mirrors the friendly roster. Each Bean card shows HP, AP, and its selected, ready, exhausted, or dead state. Clicking a ready portrait selects the same unit in the battlefield.
 
@@ -33,7 +33,7 @@ Units start their phase with 2 AP and have 100 HP. Attacks deal 25 damage, or 12
 
 Start with [the architecture guide](docs/architecture.md): ownership, the path from a click to an action, cleanup changes, and known limitations.
 
-The prototype has weighted 3D paths, low-cover vaulting, directional cover, elevation-aware line of sight, ladders, ramps, stairs, platforms, movement previews, selection, AP, shared actions, faction relationships, attacks, defense, autonomous allied and enemy turns, generated maps, battle results, a tactical camera, and health displays. It does not yet have mission actors, objectives, or a finished tactical ruleset.
+The prototype has weighted 3D paths, low-cover vaulting, directional cover, elevation-aware line of sight, ladders, ramps, stairs, platforms, movement previews, selection, AP, shared actions, faction relationships, attacks, defense, autonomous allied and enemy turns, generated maps, mission actors, six playable objective rules, battle results, a tactical camera, and health displays.
 
 Match setup supports zero to five green AI allies. Turns proceed from player to allies to enemies. Allies use the same validated movement, attack, and defense actions as every other combatant, are friendly toward players, and are hostile toward enemies. Allies do not appear in the player portrait selector and cannot be selected manually.
 
@@ -61,6 +61,8 @@ godot_console --headless --path . --script res://tests/battlefield_stress_smoke.
 godot_console --headless --path . --script res://tests/debug_tools_smoke.gd
 godot_console --headless --path . --script res://tests/map_validation_smoke.gd
 godot_console --headless --path . --script res://tests/flat_map_generator_smoke.gd
+godot_console --headless --path . --script res://tests/objective_foundation_smoke.gd
+godot_console --headless --path . --script res://tests/core_objectives_smoke.gd
 ```
 
 The smoke tests load the real battle scene and check terrain data, shared player/AI action validation, movement, AP, attacks, walls, defense, enemy turns, selection UI, and defeat cleanup. Play the scene to check appearance and combat feel.
@@ -101,7 +103,7 @@ The battle scene's `DebugTools` node exposes `Debug Tools Enabled` in the Inspec
 
 ## Mission actors
 
-Every tactical unit has a `MissionActor` component. Faction controls relationships and targeting; the mission actor independently identifies a `COMBATANT`, `VIP`, or `RESCUABLE` and whether that actor can extract others. Spawned units receive unique mission IDs, while existing Beans remain ordinary combatants. Enable the debug overlay to inspect the active unit's mission ID and role. Objectives and extraction behavior are intentionally separate future tasks.
+Every tactical unit has a `MissionActor` component. Faction controls relationships and targeting; the mission actor independently identifies a `COMBATANT`, `VIP`, or `RESCUABLE` and whether that actor can extract others. Spawned units receive unique mission IDs, while existing Beans remain ordinary combatants. Enable the debug overlay to inspect the active unit's mission ID and role.
 
 The VIP is additional to the selected player combatants and reserves one allied spawn slot. Enabling it therefore permits up to four ordinary AI allies.
 
@@ -109,6 +111,21 @@ The VIP is additional to the selected player combatants and reserves one allied 
 2. **Follow Escort:** activates during the allied phase, approaches a player combatant, then defends.
 3. **Hold Position:** remains on its spawn tile and defends.
 4. AI-controlled modes require at least two friendly slots so the VIP has an escort.
+
+## Objective foundation
+
+1. **Eliminate:** victory when all enemies are defeated.
+2. **Reach:** immediate victory when a player or AI ally reaches the zone.
+3. **Protect:** eliminate all enemies while every protected ally/VIP survives; losing one causes defeat.
+4. **Rescue:** approaching the neutral VIP picks them up; the carrier moves more slowly and must extract while carrying them. Once the VIP is being carried, other friendly units may also evacuate.
+5. **Extract:** every living player or allied unit can evacuate individually. Dead units leave the required pool. All VIPs must extract for victory; after at least one ordinary unit extracts, the player may end early and leave others behind. Extracting everyone ends automatically.
+6. **Survive:** survive three rounds, then evacuate every remaining unit; early departure is disabled.
+
+Mission and objective definitions are Godot Resources, so future missions can save required and optional objectives as data. Each battle receives separate runtime state with progress plus active, completed, or failed status. `ObjectiveManager` validates the definitions, observes battle events, and applies the selected mission's victory and defeat rules.
+
+The setup menu offers Eliminate, Protect, Rescue, Reach, Survive, and Extract presets. Starting the battle loads the selected definition and prints an `[Objectives] ACTIVE` message with its kind, requirement, and target. Progress, completion, and failure also print as objective events.
+
+The temporary top-right objective readout shows every required and optional objective, its status, and its progress. Selecting a player-controlled unit on the green zone reveals an **EXTRACT** button beside that unit. Extract missions also expose **End Mission** after at least one ordinary unit and every VIP are safe.
 
 `Manual enemy control` stops automatic enemy decisions. During each enemy activation, use the ordinary Move, Attack, and Defend buttons, then press End Turn to advance the enemy queue. `AI controls both teams` is a hands-off simulation mode and cannot be active together with manual enemy control.
 

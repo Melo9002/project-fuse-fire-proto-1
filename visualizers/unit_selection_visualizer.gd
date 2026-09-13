@@ -27,7 +27,7 @@ func _on_active_unit_changed(unit: TacticalUnit) -> void:
 		selected_unit = unit
 		_set_outline(selected_unit, true)
 
-func _set_outline(unit: TacticalUnit, enabled: bool) -> void:
+func _set_outline(unit, enabled: bool) -> void:
 	if not is_instance_valid(unit):
 		return
 	for child in unit.find_children("*", "MeshInstance3D", true, false):

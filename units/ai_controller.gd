@@ -7,6 +7,7 @@ class_name AIController
 
 var _is_executing: bool = false
 var _last_move_destination := Vector3i.ZERO
+var _objective_manager: ObjectiveManager
 
 func _ready() -> void:
 	if not _validate_dependencies():
@@ -15,6 +16,7 @@ func _ready() -> void:
 	battle_controller.debug_enemy_control_changed.connect(_on_debug_enemy_control_changed)
 	battle_controller.debug_player_ai_changed.connect(_on_debug_player_ai_changed)
 	unit.defeated.connect(_on_unit_defeated)
+	_objective_manager = get_tree().get_first_node_in_group("objective_manager") as ObjectiveManager
 
 func _validate_dependencies() -> bool:
 	var valid := true
@@ -35,6 +37,18 @@ func _on_active_unit_changed(new_active_unit: TacticalUnit) -> void:
 
 	if not _should_control_unit():
 		return
+	if _objective_manager and _objective_manager.should_seek_extraction(unit):
+		if _objective_manager.can_extract(unit):
+			_objective_manager.try_extract(unit)
+			turn_manager.end_current_turn()
+			_is_executing = false
+			return
+		if await _move_toward_cell(_nearest_extraction_cell()):
+			if _objective_manager.can_extract(unit):
+				_objective_manager.try_extract(unit)
+				turn_manager.end_current_turn()
+				_is_executing = false
+				return
 
 	print_rich("[color=magenta][AI][/color] Activated unit: [b]%s[/b]" % unit.name)
 	_execute_turn()
@@ -128,6 +142,28 @@ func _move_toward(target: TacticalUnit) -> bool:
 				return true
 		destination_index -= 1
 	return false
+
+func _move_toward_cell(target_cell: Vector3i) -> bool:
+	var start_cell := battle_controller.grid_manager.get_unit_grid(unit)
+	var path := battle_controller.pathfinder.calculate_3d_path(start_cell, target_cell)
+	if path.size() <= 1: return false
+	var reachable := battle_controller.pathfinder.get_reachable_cells(start_cell, unit.stats.speed)
+	for index in range(path.size() - 1, 0, -1):
+		var candidate := battle_controller.world_to_grid(path[index])
+		if reachable.has(candidate) and battle_controller.grid_manager.can_unit_occupy_cell(unit, candidate):
+			return await battle_controller.try_move(unit, candidate)
+	return false
+
+func _nearest_extraction_cell() -> Vector3i:
+	var start := battle_controller.grid_manager.get_unit_grid(unit)
+	var best := Vector3i(-1, -1, -1)
+	var distance := INF
+	for cell in battle_controller.grid_manager.map_data.get_objective_zone(&"extract"):
+		var candidate_distance := start.distance_squared_to(cell)
+		if candidate_distance < distance:
+			distance = candidate_distance
+			best = cell
+	return best
 
 func _find_attack_target() -> TacticalUnit:
 	var best_target: TacticalUnit

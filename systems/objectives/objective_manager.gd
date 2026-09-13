@@ -1,0 +1,233 @@
+class_name ObjectiveManager
+extends Node
+
+signal mission_loaded(mission: MissionDefinition)
+signal objective_progress_changed(state: MissionObjectiveState)
+signal objective_completed(state: MissionObjectiveState)
+signal objective_failed(state: MissionObjectiveState)
+signal mission_report_changed
+
+@export var mission: MissionDefinition
+var _states: Dictionary[StringName, MissionObjectiveState] = {}
+var _turn_manager: TurnManager
+var _battle_controller: BattleController
+var _grid_manager: GridManager
+var total_vips := 0
+var extracted_vips := 0
+var total_units := 0
+var extracted_units := 0
+
+func _ready() -> void:
+	if mission: load_mission(mission)
+
+func load_mission(definition: MissionDefinition) -> bool:
+	if not _is_valid_definition(definition): return false
+	mission = definition
+	_states.clear()
+	for objective in mission.objectives:
+		_states[objective.objective_id] = MissionObjectiveState.new(objective)
+	mission_loaded.emit(mission)
+	_print_active_objectives()
+	return true
+
+func clear_mission() -> void:
+	mission = null
+	_states.clear()
+
+func begin_tracking(turn_manager: TurnManager, battle_controller: BattleController, grid_manager: GridManager) -> void:
+	_turn_manager = turn_manager
+	_battle_controller = battle_controller
+	_grid_manager = grid_manager
+	turn_manager.automatic_annihilation_results = false
+	turn_manager.round_started.connect(_on_round_started)
+	battle_controller.unit_moved.connect(_on_unit_moved)
+	battle_controller.unit_defeated_in_battle.connect(_on_unit_defeated)
+	_initialize_extraction_totals()
+
+func get_objective(id: StringName) -> MissionObjectiveState:
+	return _states.get(id) as MissionObjectiveState
+
+func get_objectives() -> Array[MissionObjectiveState]:
+	var result: Array[MissionObjectiveState] = []
+	for definition in mission.objectives if mission else []:
+		result.append(_states[definition.objective_id])
+	return result
+
+func add_progress(id: StringName, amount := 1) -> bool:
+	var state := get_objective(id)
+	if not state or not state.is_active() or amount <= 0: return false
+	state.progress = mini(state.progress + amount, state.definition.target_amount)
+	objective_progress_changed.emit(state)
+	print_rich("[color=medium_purple][Objectives][/color] PROGRESS — %s %d/%d" % [state.definition.title, state.progress, state.definition.target_amount])
+	if state.progress >= state.definition.target_amount: _complete_state(state)
+	return true
+
+func complete_objective(id: StringName) -> bool:
+	var state := get_objective(id)
+	if not state or not state.is_active(): return false
+	state.progress = state.definition.target_amount
+	objective_progress_changed.emit(state)
+	_complete_state(state)
+	return true
+
+func fail_objective(id: StringName) -> bool:
+	var state := get_objective(id)
+	if not state or not state.is_active(): return false
+	state.status = MissionObjectiveState.Status.FAILED
+	objective_failed.emit(state)
+	print_rich("[color=red][Objectives][/color] FAILED — %s" % state.definition.title)
+	_evaluate_outcome.call_deferred()
+	return true
+
+func are_required_objectives_complete() -> bool:
+	var found := false
+	for state in get_objectives():
+		if state.definition.required:
+			found = true
+			if not state.is_completed(): return false
+	return found
+
+func has_required_objective_failed() -> bool:
+	for state in get_objectives():
+		if state.definition.required and state.is_failed(): return true
+	return false
+
+func can_extract(unit: TacticalUnit) -> bool:
+	if not is_instance_valid(unit) or unit.is_moving or not _turn_manager or not _grid_manager: return false
+	if _turn_manager.active_unit != unit or (not _turn_manager.player_units.has(unit) and not _turn_manager.allied_units.has(unit)): return false
+	if not _grid_manager.map_data.get_objective_zone(&"extract").has(_grid_manager.get_unit_grid(unit)): return false
+	if mission.mission_id == &"prototype_survive" and not get_objective(&"survive").is_completed(): return false
+	return _has_extract_target(unit)
+
+func should_seek_extraction(unit: TacticalUnit) -> bool:
+	if not is_instance_valid(unit) or unit.faction not in [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ALLY]: return false
+	if not _has_extract_target(unit): return false
+	return mission.mission_id != &"prototype_survive" or get_objective(&"survive").is_completed()
+
+func try_extract(unit: TacticalUnit) -> bool:
+	if not can_extract(unit): return false
+	if unit.is_carrying_unit():
+		_record_vip_extraction(unit.carried_unit)
+		unit.carried_unit.queue_free()
+	if unit.mission_actor.is_vip():
+		_record_vip_extraction(unit)
+	else:
+		extracted_units += 1
+		var squad := get_objective(&"extract_units")
+		if squad and squad.is_active(): add_progress(&"extract_units")
+	mission_report_changed.emit()
+	_battle_controller.extract_unit(unit)
+	_evaluate_outcome.call_deferred()
+	return true
+
+func can_end_mission_early() -> bool:
+	return mission and mission.mission_id == &"prototype_extract" and extracted_units > 0 and _all_vip_objectives_complete()
+
+func end_mission_early() -> bool:
+	if not can_end_mission_early(): return false
+	_turn_manager.finish_battle(TurnManager.BattleResult.VICTORY)
+	return true
+
+func get_result_report() -> String:
+	return "VIPs extracted %d/%d | Units extracted %d/%d" % [extracted_vips, total_vips, extracted_units, total_units]
+
+func _initialize_extraction_totals() -> void:
+	for unit in _turn_manager.player_units + _turn_manager.allied_units:
+		if unit.mission_actor.is_vip(): total_vips += 1
+		else: total_units += 1
+	if mission.mission_id == &"prototype_rescue": total_vips += 1
+	var squad := get_objective(&"extract_units")
+	if squad: squad.definition.target_amount = maxi(1, total_units)
+	mission_report_changed.emit()
+
+func _on_unit_defeated(unit: TacticalUnit) -> void:
+	for state in get_objectives():
+		if not state.is_active(): continue
+		if state.definition.kind == MissionObjectiveDefinition.Kind.ELIMINATE and unit.faction == TacticalUnit.Faction.ENEMY:
+			add_progress(state.definition.objective_id)
+		elif state.definition.kind in [MissionObjectiveDefinition.Kind.PROTECT, MissionObjectiveDefinition.Kind.RESCUE, MissionObjectiveDefinition.Kind.EXTRACT] and state.definition.target_ids.has(unit.get_mission_id()):
+			fail_objective(state.definition.objective_id)
+	if unit.faction in [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ALLY] and not unit.mission_actor.is_vip():
+		total_units = maxi(extracted_units, total_units - 1)
+		var squad := get_objective(&"extract_units")
+		if squad and squad.is_active():
+			squad.definition.target_amount = maxi(1, total_units)
+			if squad.progress >= squad.definition.target_amount:
+				_complete_state(squad)
+	mission_report_changed.emit()
+	_evaluate_outcome.call_deferred()
+
+func _on_round_started(round_number: int) -> void:
+	if round_number > 1 and get_objective(&"survive"): add_progress(&"survive")
+
+func _on_unit_moved(unit: TacticalUnit, _from: Vector3i, to: Vector3i) -> void:
+	var reach := get_objective(&"reach")
+	if reach and reach.is_active() and unit.faction in [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ALLY] and _grid_manager.map_data.get_objective_zone(&"reach").has(to):
+		complete_objective(&"reach")
+	var rescue := get_objective(&"rescue")
+	if rescue and rescue.is_active() and unit.faction == TacticalUnit.Faction.PLAYER:
+		var target := _adjacent_target(to, rescue.definition.target_ids)
+		if target:
+			_grid_manager.unregister_unit_at(_grid_manager.get_unit_grid(target))
+			unit.carry_unit(target)
+			complete_objective(&"rescue")
+
+func _adjacent_target(cell: Vector3i, ids: Array[StringName]) -> TacticalUnit:
+	for occupied in _grid_manager.occupancy_map:
+		var target := _grid_manager.get_unit_at(occupied)
+		if is_instance_valid(target) and ids.has(target.get_mission_id()) and cell.distance_to(occupied) == 1.0: return target
+	return null
+
+func _has_extract_target(unit: TacticalUnit) -> bool:
+	var rescue := get_objective(&"rescue")
+	if mission.mission_id == &"prototype_rescue" and rescue and rescue.is_completed():
+		return unit.faction in [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ALLY]
+	for state in get_objectives():
+		if not state.is_active() or state.definition.kind != MissionObjectiveDefinition.Kind.EXTRACT: continue
+		if state.definition.target_ids.is_empty() or state.definition.target_ids.has(unit.get_mission_id()): return true
+		if unit.is_carrying_unit() and state.definition.target_ids.has(unit.carried_unit.get_mission_id()): return true
+	return false
+
+func _record_vip_extraction(unit: TacticalUnit) -> void:
+	extracted_vips += 1
+	for state in get_objectives():
+		if state.is_active() and state.definition.kind == MissionObjectiveDefinition.Kind.EXTRACT and state.definition.target_ids.has(unit.get_mission_id()): add_progress(state.definition.objective_id)
+
+func _complete_state(state: MissionObjectiveState) -> void:
+	state.status = MissionObjectiveState.Status.COMPLETED
+	objective_completed.emit(state)
+	print_rich("[color=green][Objectives][/color] COMPLETED — %s" % state.definition.title)
+	if state.definition.kind == MissionObjectiveDefinition.Kind.ELIMINATE:
+		var protect := get_objective(&"protect")
+		if protect and protect.is_active(): complete_objective(&"protect")
+	_evaluate_outcome.call_deferred()
+
+func _evaluate_outcome() -> void:
+	if not _turn_manager or _turn_manager.battle_result != TurnManager.BattleResult.ONGOING: return
+	if has_required_objective_failed():
+		_turn_manager.finish_battle(TurnManager.BattleResult.DEFEAT)
+		return
+	if are_required_objectives_complete():
+		if mission.mission_id != &"prototype_extract" or extracted_units >= total_units:
+			_turn_manager.finish_battle(TurnManager.BattleResult.VICTORY)
+			return
+	if _turn_manager.player_units.is_empty() and not can_end_mission_early():
+		_turn_manager.finish_battle(TurnManager.BattleResult.DEFEAT)
+
+func _all_vip_objectives_complete() -> bool:
+	for state in get_objectives():
+		if state.definition.kind == MissionObjectiveDefinition.Kind.EXTRACT and not state.definition.target_ids.is_empty() and not state.is_completed(): return false
+	return true
+
+func _is_valid_definition(candidate: MissionDefinition) -> bool:
+	if not candidate or candidate.mission_id.is_empty(): return false
+	var ids: Dictionary[StringName, bool] = {}
+	for objective in candidate.objectives:
+		if not objective or objective.objective_id.is_empty() or objective.target_amount < 1 or ids.has(objective.objective_id): return false
+		ids[objective.objective_id] = true
+	return true
+
+func _print_active_objectives() -> void:
+	var labels: Array[String] = []
+	for state in get_objectives(): labels.append("%s [%s, %s, 0/%d]" % [state.definition.title, MissionObjectiveDefinition.Kind.keys()[state.definition.kind], "required" if state.definition.required else "optional", state.definition.target_amount])
+	print_rich("[color=medium_purple][Objectives][/color] ACTIVE — %s: %s" % [mission.title, "; ".join(labels)])

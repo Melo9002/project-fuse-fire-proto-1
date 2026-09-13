@@ -8,8 +8,11 @@ extends Node3D
 @export var player_units_parent: Node3D
 @export var allied_units_parent: Node3D
 @export var enemy_units_parent: Node3D
+@export var objective_units_parent: Node3D
 @export var turn_manager: TurnManager
 @export var battle_controller: BattleController
+@export var objective_manager: ObjectiveManager
+@export var objective_zone_visualizer: ObjectiveZoneVisualizer
 @export_range(1, 20, 1) var test_battle_attack_range: int = 5
 
 var player_unit_count: int = 2
@@ -20,8 +23,9 @@ var generation_seed: int = 1
 var generated_size := Vector2i(32, 24)
 var include_vip := false
 var vip_behavior := MissionActor.VIPBehavior.PLAYER_CONTROLLED
+var mission_definition: MissionDefinition
 
-func configure(player_count: int, enemy_count: int, generate_map: bool = false, map_seed: int = 1, ally_count: int = 0, map_size := Vector2i(32, 24), add_vip: bool = false, behavior: MissionActor.VIPBehavior = MissionActor.VIPBehavior.PLAYER_CONTROLLED) -> void:
+func configure(player_count: int, enemy_count: int, generate_map: bool = false, map_seed: int = 1, ally_count: int = 0, map_size := Vector2i(32, 24), add_vip: bool = false, behavior: MissionActor.VIPBehavior = MissionActor.VIPBehavior.PLAYER_CONTROLLED, selected_mission: MissionDefinition = null) -> void:
 	generated_size = map_size if FlatMapGenerator.MAP_SIZES.has(map_size) else Vector2i(32, 24)
 	player_unit_count = clampi(player_count, 1, 5)
 	enemy_unit_count = clampi(enemy_count, 1, 5)
@@ -30,8 +34,11 @@ func configure(player_count: int, enemy_count: int, generate_map: bool = false, 
 	generation_seed = map_seed
 	include_vip = add_vip
 	vip_behavior = behavior
+	mission_definition = selected_mission
 
 func _ready() -> void:
+	if mission_definition != null:
+		objective_manager.load_mission(mission_definition)
 	if use_generated_map:
 		_set_authored_geometry_enabled(false)
 		var grid := battle_controller.grid_manager
@@ -55,13 +62,38 @@ func _ready() -> void:
 		_spawn_generated_team(enemy_unit_count, TacticalUnit.Faction.ENEMY, enemy_units_parent, generated_map)
 		var cover_counts := _count_cover(generated_map)
 		print_rich("[color=cyan][MapGenerator][/color] COVER — seed %d, %dx%d, %d low, %d full, %d building(s)" % [generation_seed, width, depth, cover_counts.x, cover_counts.y, generated_map.buildings.size()])
-		await battle_controller.initialize_battle(generated_map)
+		if await battle_controller.initialize_battle(generated_map):
+			_initialize_objectives()
 	else:
 		_spawn_team(player_unit_count, player_spawn_zone, player_units_parent, false)
 		_spawn_team(allied_unit_count, ally_spawn_zone, allied_units_parent, true)
 		_spawn_vip()
 		_spawn_team(enemy_unit_count, enemy_spawn_zone, enemy_units_parent, true)
-		await battle_controller.initialize_battle()
+		if await battle_controller.initialize_battle():
+			_initialize_objectives()
+
+func _initialize_objectives() -> void:
+	if mission_definition == null:
+		return
+	objective_manager.begin_tracking(turn_manager, battle_controller, battle_controller.grid_manager)
+	if objective_manager.get_objective(&"rescue"):
+		_spawn_rescue_target()
+	objective_zone_visualizer.show_mission(mission_definition)
+
+func _spawn_rescue_target() -> void:
+	var grid := battle_controller.grid_manager
+	var spawn_cell := MissionZonePlanner.find_rescue_cell(grid.map_data)
+	if spawn_cell.x < 0 or grid.is_cell_occupied(spawn_cell):
+		push_error("BattleLevel: no valid RescueTarget cell")
+		return
+	var unit := unit_scene.instantiate() as TacticalUnit
+	unit.name = "RescueTarget"
+	unit.faction = TacticalUnit.Faction.NEUTRAL
+	unit.mission_actor.mission_id = &"RescueTarget"
+	unit.mission_actor.kind = MissionActor.Kind.RESCUABLE
+	objective_units_parent.add_child(unit)
+	unit.global_position = grid.grid_to_world(spawn_cell) + Vector3.UP * unit.standing_height
+	battle_controller.register_mission_unit(unit, spawn_cell)
 
 func _spawn_team(count: int, zone: SpawnZone, parent: Node3D, add_ai: bool) -> void:
 	if not unit_scene or not zone or not parent or not turn_manager:

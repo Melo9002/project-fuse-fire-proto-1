@@ -8,6 +8,7 @@ var columns: Dictionary = {}
 var traversal_links: Array[TraversalLinkData] = []
 var los_blocking_cells: Array[MapCellData] = []
 var spawn_cells: Dictionary = {}
+var objective_zones: Dictionary[StringName, Array] = {}
 var source_kind: String = "authored"
 var generation_seed: int = 0
 var map_size := Vector2i.ZERO
@@ -55,6 +56,14 @@ func get_total_spawn_count() -> int:
 		total += faction_cells.size()
 	return total
 
+func set_objective_zone(zone_id: StringName, zone_cells: Array[Vector3i]) -> void:
+	objective_zones[zone_id] = zone_cells.duplicate()
+
+func get_objective_zone(zone_id: StringName) -> Array[Vector3i]:
+	var result: Array[Vector3i] = []
+	result.assign(objective_zones.get(zone_id, []))
+	return result
+
 func rebuild_los_index() -> void:
 	los_blocking_cells.clear()
 	for cell: MapCellData in cells.values():
@@ -69,6 +78,7 @@ func clear() -> void:
 	traversal_links.clear()
 	los_blocking_cells.clear()
 	spawn_cells.clear()
+	objective_zones.clear()
 	source_kind = "authored"
 	generation_seed = 0
 	map_size = Vector2i.ZERO

@@ -10,6 +10,8 @@ signal units_registered(player_units: Array[TacticalUnit])
 signal debug_enemy_control_changed(enabled: bool)
 signal debug_player_ai_changed(enabled: bool)
 signal ai_decision_recorded(record: Dictionary)
+signal unit_moved(unit: TacticalUnit, from_cell: Vector3i, to_cell: Vector3i)
+signal unit_defeated_in_battle(unit: TacticalUnit)
 
 @export var tactical_unit: TacticalUnit
 @export var mouse_raycaster: MouseRaycaster
@@ -75,6 +77,7 @@ func initialize_battle(prebuilt_map: MapData = null) -> bool:
 		# Let CSG collision bodies enter the physics world before scanning.
 		await get_tree().create_timer(0.05).timeout
 		MapBuilder.scan_obstacles(get_world_3d(), grid_manager, pathfinder)
+	MissionZonePlanner.populate_defaults(grid_manager.map_data)
 	var faction_counts := {
 		TacticalUnit.Faction.PLAYER: 0,
 		TacticalUnit.Faction.ALLY: 0,
@@ -345,6 +348,7 @@ func try_move(unit: TacticalUnit, target_cell: Vector3i) -> bool:
 	is_attack_mode_active = false
 	await unit.movement_finished
 	is_action_in_progress = false
+	unit_moved.emit(unit, start_cell, target_cell)
 	return true
 
 func _build_movement_path(unit: TacticalUnit, path: PackedVector3Array) -> PackedVector3Array:
@@ -361,10 +365,22 @@ func _on_unit_defeated(unit: TacticalUnit) -> void:
 	if not is_instance_valid(unit):
 		return
 
+	unit_defeated_in_battle.emit(unit)
 	grid_manager.unregister_unit_at(grid_manager.get_unit_grid(unit))
 	turn_manager.remove_unit(unit)
 	if tactical_unit == unit:
 		tactical_unit = null
 	is_move_mode_active = false
 	is_attack_mode_active = false
+	unit.queue_free()
+
+func register_mission_unit(unit: TacticalUnit, grid_position: Vector3i) -> void:
+	grid_manager.register_unit(unit, grid_position)
+	unit.defeated.connect(_on_unit_defeated)
+
+func extract_unit(unit: TacticalUnit) -> void:
+	if not is_instance_valid(unit):
+		return
+	grid_manager.unregister_unit_at(grid_manager.get_unit_grid(unit))
+	turn_manager.remove_extracted_unit(unit)
 	unit.queue_free()

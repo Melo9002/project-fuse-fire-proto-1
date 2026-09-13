@@ -24,6 +24,9 @@
 [ext_resource type="Script" path="res://systems/grid/elevation_path.gd" id="25_elevation_path"]
 [ext_resource type="Script" path="res://ui/debug_tools.gd" id="26_debug_tools"]
 [ext_resource type="Script" path="res://visualizers/shot_trajectory_visualizer.gd" id="27_shot_trajectory"]
+[ext_resource type="Script" path="res://systems/objectives/objective_manager.gd" id="28_objectives"]
+[ext_resource type="Script" path="res://visualizers/objective_zone_visualizer.gd" id="29_objective_zones"]
+[ext_resource type="Script" path="res://ui/objective_hud.gd" id="30_objective_hud"]
 
 [sub_resource type="Environment" id="Environment_8x357"]
 background_mode = 1
@@ -52,7 +55,7 @@ albedo_color = Color(0.95, 0.7, 0.12, 1)
 
 [sub_resource type="CompressedTexture2D" id="CompressedTexture2D_ebqvm"]
 
-[node name="BattleLevel" type="Node3D" unique_id=1534168603 node_paths=PackedStringArray("player_spawn_zone", "enemy_spawn_zone", "ally_spawn_zone", "player_units_parent", "allied_units_parent", "enemy_units_parent", "turn_manager", "battle_controller")]
+[node name="BattleLevel" type="Node3D" unique_id=1534168603 node_paths=PackedStringArray("player_spawn_zone", "enemy_spawn_zone", "ally_spawn_zone", "player_units_parent", "allied_units_parent", "enemy_units_parent", "objective_units_parent", "turn_manager", "battle_controller", "objective_manager", "objective_zone_visualizer")]
 script = ExtResource("16_level")
 unit_scene = ExtResource("4_tsi40")
 player_spawn_zone = NodePath("SpawnZones/PlayerSpawnZone")
@@ -61,8 +64,11 @@ ally_spawn_zone = NodePath("SpawnZones/AllySpawnZone")
 player_units_parent = NodePath("Units/PlayerUnits")
 allied_units_parent = NodePath("Units/AlliedUnits")
 enemy_units_parent = NodePath("Units/EnemyUnits")
+objective_units_parent = NodePath("Units/ObjectiveUnits")
 turn_manager = NodePath("Systems/TurnManager")
 battle_controller = NodePath("Systems/BattleController")
+objective_manager = NodePath("Systems/ObjectiveManager")
+objective_zone_visualizer = NodePath("Visualizers/ObjectiveZoneVisualizer")
 
 [node name="CameraRig" type="Node3D" parent="." node_paths=PackedStringArray("map_floor", "camera")]
 rotation_degrees = Vector3(-45, 0, 0)
@@ -97,8 +103,11 @@ turn_manager = NodePath("../TurnManager")
 script = ExtResource("7_ao12l")
 map_floor = NodePath("../../Environment/MapFloor")
 
-[node name="TurnManager" type="Node" parent="Systems" unique_id=1069557217]
+[node name="TurnManager" type="Node" parent="Systems" unique_id=1069557217 groups=["turn_manager"]]
 script = ExtResource("8_butv0")
+
+[node name="ObjectiveManager" type="Node" parent="Systems" groups=["objective_manager"]]
+script = ExtResource("28_objectives")
 
 
 [node name="Environment" type="Node3D" parent="." unique_id=1970157743]
@@ -568,6 +577,8 @@ material = SubResource("StandardMaterial3D_ladder")
 
 [node name="AlliedUnits" type="Node3D" parent="Units"]
 
+[node name="ObjectiveUnits" type="Node3D" parent="Units"]
+
 [node name="SpawnZones" type="Node3D" parent="."]
 
 [node name="PlayerSpawnZone" type="Node3D" parent="SpawnZones"]
@@ -650,6 +661,10 @@ grid_manager = NodePath("../../Systems/GridManager")
 script = ExtResource("22_cover")
 grid_manager = NodePath("../../Systems/GridManager")
 
+[node name="ObjectiveZoneVisualizer" type="Node3D" parent="Visualizers" node_paths=PackedStringArray("grid_manager")]
+script = ExtResource("29_objective_zones")
+grid_manager = NodePath("../../Systems/GridManager")
+
 [node name="ShotTrajectoryVisualizer" type="Node3D" parent="Visualizers" node_paths=PackedStringArray("grid_manager")]
 script = ExtResource("27_shot_trajectory")
 grid_manager = NodePath("../../Systems/GridManager")
@@ -662,7 +677,7 @@ battle_controller = NodePath("../../Systems/BattleController")
 [node name="BattleUI" type="CanvasLayer" parent="Visualizers" unique_id=1620723361 groups=["UI_LAYER"]]
 follow_viewport_enabled = true
 
-[node name="TurnHUDController" type="Control" parent="Visualizers/BattleUI" unique_id=820213841 node_paths=PackedStringArray("turn_manager", "battle_controller", "turn_label", "end_turn_button")]
+[node name="TurnHUDController" type="Control" parent="Visualizers/BattleUI" unique_id=820213841 node_paths=PackedStringArray("turn_manager", "battle_controller", "objective_manager", "turn_label", "end_turn_button")]
 layout_mode = 3
 anchors_preset = 0
 offset_left = 30.0
@@ -672,6 +687,7 @@ offset_bottom = 34.0
 script = ExtResource("9_6xxhk")
 turn_manager = NodePath("../../../Systems/TurnManager")
 battle_controller = NodePath("../../../Systems/BattleController")
+objective_manager = NodePath("../../../Systems/ObjectiveManager")
 turn_label = NodePath("VBoxContainer/TurnLabel")
 end_turn_button = NodePath("VBoxContainer/EndTurnButton")
 
@@ -727,6 +743,34 @@ text = "Attack"
 [node name="DefendButton" type="Button" parent="Visualizers/BattleUI/ActionHUDController/ActionBar" unique_id=1002343883]
 layout_mode = 2
 text = "Defend"
+
+[node name="ObjectiveHUD" type="VBoxContainer" parent="Visualizers/BattleUI" node_paths=PackedStringArray("objective_manager", "objective_label", "end_mission_button")]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -430.0
+offset_top = 48.0
+offset_right = -18.0
+offset_bottom = 82.0
+grow_horizontal = 0
+script = ExtResource("30_objective_hud")
+objective_manager = NodePath("../../../Systems/ObjectiveManager")
+objective_label = NodePath("ObjectiveLabel")
+end_mission_button = NodePath("EndMissionButton")
+
+[node name="ObjectiveLabel" type="Label" parent="Visualizers/BattleUI/ObjectiveHUD"]
+layout_mode = 2
+text = "OBJECTIVE: NONE"
+horizontal_alignment = 2
+theme_override_colors/font_color = Color(0.85, 0.75, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+
+[node name="EndMissionButton" type="Button" parent="Visualizers/BattleUI/ObjectiveHUD"]
+layout_mode = 2
+text = "END MISSION — LEAVE OTHERS BEHIND"
+visible = false
 
 [node name="UnitPortraitBar" type="Control" parent="Visualizers/BattleUI" node_paths=PackedStringArray("turn_manager", "battle_controller", "portraits_container")]
 layout_mode = 3
