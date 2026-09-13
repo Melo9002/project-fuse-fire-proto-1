@@ -1,6 +1,8 @@
 class_name ObjectiveManager
 extends Node
 
+const MissionIntentData = preload("res://systems/objectives/mission_intent.gd")
+
 signal mission_loaded(mission: MissionDefinition)
 signal objective_progress_changed(state: MissionObjectiveState)
 signal objective_completed(state: MissionObjectiveState)
@@ -52,6 +54,50 @@ func get_objectives() -> Array[MissionObjectiveState]:
 	for definition in mission.objectives if mission else []:
 		result.append(_states[definition.objective_id])
 	return result
+
+func get_mission_intent(unit: TacticalUnit) -> MissionIntentData:
+	if not mission or not is_instance_valid(unit):
+		return MissionIntentData.new()
+
+	var rescue := _first_active_objective(MissionObjectiveDefinition.Kind.RESCUE, unit.faction)
+	if rescue:
+		return _build_intent(rescue, MissionIntentData.Kind.RESCUE, &"", "Approach and secure the rescue target.")
+
+	if should_seek_extraction(unit):
+		var extraction := _first_active_objective(MissionObjectiveDefinition.Kind.EXTRACT, unit.faction)
+		if extraction:
+			return _build_intent(extraction, MissionIntentData.Kind.EXTRACT, &"extract", "Reach the extraction zone and evacuate.")
+
+	var reach := _first_active_objective(MissionObjectiveDefinition.Kind.REACH, unit.faction)
+	if reach:
+		return _build_intent(reach, MissionIntentData.Kind.REACH, &"reach", "Reach the mission destination.")
+	var protect := _first_active_objective(MissionObjectiveDefinition.Kind.PROTECT, unit.faction)
+	if protect:
+		return _build_intent(protect, MissionIntentData.Kind.PROTECT, &"", "Keep the protected mission actor alive.")
+	var survive := _first_active_objective(MissionObjectiveDefinition.Kind.SURVIVE, unit.faction)
+	if survive:
+		return _build_intent(survive, MissionIntentData.Kind.SURVIVE, &"", "Remain alive until the survival requirement is complete.")
+	var eliminate := _first_active_objective(MissionObjectiveDefinition.Kind.ELIMINATE, unit.faction)
+	if eliminate:
+		return _build_intent(eliminate, MissionIntentData.Kind.ELIMINATE, &"", "Defeat hostile combatants.")
+	return MissionIntentData.new()
+
+func _first_active_objective(kind: MissionObjectiveDefinition.Kind, faction: TacticalUnit.Faction) -> MissionObjectiveState:
+	for state in get_objectives():
+		if state.is_active() and state.definition.kind == kind and state.definition.is_pursued_by(faction):
+			return state
+	return null
+
+func _build_intent(state: MissionObjectiveState, kind: MissionIntentData.Kind, zone_id: StringName, reason: String) -> MissionIntentData:
+	return MissionIntentData.new(
+		kind,
+		state.definition.objective_id,
+		state.definition.title,
+		zone_id,
+		state.definition.target_ids,
+		state.definition.required,
+		reason
+	)
 
 func add_progress(id: StringName, amount := 1) -> bool:
 	var state := get_objective(id)

@@ -289,7 +289,7 @@ func is_current_phase_manually_controlled() -> bool:
 	return (not debug_player_ai and turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN) \
 		or (debug_enemy_control and turn_manager.current_phase == TurnManager.TurnPhase.ENEMY_TURN)
 
-func record_ai_decision(actor: TacticalUnit, action: String, subject: String, reason: String, alternatives: String) -> void:
+func record_ai_decision(actor: TacticalUnit, action: String, subject: String, reason: String, alternatives: String, mission_goal := "None") -> void:
 	var actor_name := "Unknown"
 	if is_instance_valid(actor):
 		actor_name = String(actor.name)
@@ -299,6 +299,7 @@ func record_ai_decision(actor: TacticalUnit, action: String, subject: String, re
 		"subject": subject,
 		"reason": reason,
 		"alternatives": alternatives,
+		"mission_goal": mission_goal,
 	})
 
 func try_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:

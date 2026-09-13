@@ -49,6 +49,7 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 | `ObjectiveManager` | Creates objective state, applies updates, and emits objective signals | Connecting future mission events and UI to objective progress |
 | `TacticalUnit` | Path animation, defeat relay, health-display creation | Changing unit movement or presentation |
 | `AIController` | Chooses among legal attacks, movement, and defense | Changing enemy priorities or difficulty |
+| `MissionIntent` | Describes the active mission goal for one automated unit | Adding objective-aware AI planning |
 | UI and visualizers | Display state and forward input | Changing feedback and presentation |
 | `TacticalCamera` | Bounded pan, zoom, and rotation | Changing how the battlefield is viewed |
 | `BattleLevel` | Builds selected teams before starting combat | Changing how a match is assembled |
@@ -82,6 +83,10 @@ Objectives use three layers. `MissionObjectiveDefinition` and `MissionDefinition
 `ObjectiveHUD` mirrors every objective state in the top-right display and exposes early mission completion when its rules permit it. Extraction is a zero-AP `ExtractAction`: `UnitWorldBar` shows its button for any eligible player-controlled unit standing inside the extraction cells, even when exhausted. `ObjectiveManager` owns mission eligibility and evacuation bookkeeping. Automated allies call the same action gateway before leaving through the zone.
 
 Rounds proceed through `PLAYER_TURN → ALLY_TURN → ENEMY_TURN`; an empty allied roster skips its phase. Allied units are autonomous, use the same `AIController` and action gateways as enemies, remain outside player selection, and share player hostility rules. They do not prevent defeat when every player-controlled unit is lost.
+
+`ObjectiveManager.get_mission_intent()` translates active objective state into a faction-relevant `MissionIntent`. The value identifies the objective, intent kind, zone, actor IDs, requirement status, and reason without executing an action. Each objective carries a faction mask declaring who pursues it; player and ally are the default, while future asymmetric missions may assign separate goals to enemies. AI therefore receives a mission goal alongside its combat choices. Rescue precedes extraction, and extraction unlocks only when mission rules allow it.
+
+Reach and Extract intents are executable AI goals. `AIController` compares every eligible zone cell by reachable path length, advances once toward the best route, and then retains any remaining AP for combat. An eligible unit already in extraction, including one with zero AP, calls `ObjectiveManager.try_extract()` and therefore the shared `ExtractAction`. Roster removal decides whether another automated player activates or the allied queue advances, avoiding a second phase transition from the AI controller.
 
 ## Battlefield validation
 

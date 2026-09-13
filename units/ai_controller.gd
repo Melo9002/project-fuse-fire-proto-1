@@ -1,6 +1,8 @@
 extends Node
 class_name AIController
 
+const MissionIntentData = preload("res://systems/objectives/mission_intent.gd")
+
 @export var unit: TacticalUnit
 @export var turn_manager: TurnManager
 @export var battle_controller: BattleController
@@ -8,6 +10,13 @@ class_name AIController
 var _is_executing: bool = false
 var _last_move_destination := Vector3i.ZERO
 var _objective_manager: ObjectiveManager
+var current_mission_intent := MissionIntentData.new()
+
+enum MissionStepResult {
+	NONE,
+	MOVED,
+	EXTRACTED,
+}
 
 func _ready() -> void:
 	if not _validate_dependencies():
@@ -37,18 +46,8 @@ func _on_active_unit_changed(new_active_unit: TacticalUnit) -> void:
 
 	if not _should_control_unit():
 		return
-	if _objective_manager and _objective_manager.should_seek_extraction(unit):
-		if _objective_manager.can_extract(unit):
-			_objective_manager.try_extract(unit)
-			turn_manager.end_current_turn()
-			_is_executing = false
-			return
-		if await _move_toward_cell(_nearest_extraction_cell()):
-			if _objective_manager.can_extract(unit):
-				_objective_manager.try_extract(unit)
-				turn_manager.end_current_turn()
-				_is_executing = false
-				return
+	current_mission_intent = _objective_manager.get_mission_intent(unit) if _objective_manager else MissionIntentData.new()
+	print_rich("[color=medium_purple][AI Goal][/color] %s — %s: %s" % [unit.name, current_mission_intent.get_debug_label(), current_mission_intent.reason])
 
 	print_rich("[color=magenta][AI][/color] Activated unit: [b]%s[/b]" % unit.name)
 	_execute_turn()
@@ -67,22 +66,35 @@ func _execute_turn() -> void:
 		_is_executing = false
 		return
 	var has_moved := false
+	current_mission_intent = _objective_manager.get_mission_intent(unit) if _objective_manager else MissionIntentData.new()
+	if current_mission_intent.kind == MissionIntentData.Kind.EXTRACT and _objective_manager.can_extract(unit):
+		if await _try_mission_step(false) == MissionStepResult.EXTRACTED:
+			_is_executing = false
+			return
 	while is_instance_valid(unit) and unit.stats.current_ap > 0 \
 		and turn_manager.battle_result == TurnManager.BattleResult.ONGOING \
 		and _should_control_unit():
+		current_mission_intent = _objective_manager.get_mission_intent(unit) if _objective_manager else MissionIntentData.new()
+		var mission_step := await _try_mission_step(has_moved)
+		if mission_step == MissionStepResult.EXTRACTED:
+			_is_executing = false
+			return
+		if mission_step == MissionStepResult.MOVED:
+			has_moved = true
+			continue
 		var attack_target = _find_attack_target()
 		if attack_target and battle_controller.try_attack(unit, attack_target):
-			battle_controller.record_ai_decision(unit, "Attack", attack_target.name, "Legal shot; target has the lowest HP among legal targets.", "Move, Defend")
+			battle_controller.record_ai_decision(unit, "Attack", attack_target.name, "Legal shot; target has the lowest HP among legal targets.", "Move, Defend", current_mission_intent.get_debug_label())
 			await get_tree().create_timer(0.25).timeout
 			continue
 		var movement_target = _find_nearest_hostile()
 		if not has_moved and movement_target and await _move_toward(movement_target):
 			has_moved = true
-			battle_controller.record_ai_decision(unit, "Move", str(_last_move_destination), "No legal shot; approached the nearest hostile unit.", "Attack, Defend")
+			battle_controller.record_ai_decision(unit, "Move", str(_last_move_destination), "No legal shot; approached the nearest hostile unit.", "Attack, Defend", current_mission_intent.get_debug_label())
 			continue
 		if battle_controller.try_defend(unit):
 			var reason := "No legal shot after moving." if has_moved else "No legal shot or reachable approach."
-			battle_controller.record_ai_decision(unit, "Defend", unit.name, reason, "Attack, Move")
+			battle_controller.record_ai_decision(unit, "Defend", unit.name, reason, "Attack, Move", current_mission_intent.get_debug_label())
 		break
 
 	if _should_control_unit():
@@ -91,6 +103,37 @@ func _execute_turn() -> void:
 		else:
 			turn_manager.end_current_turn()
 	_is_executing = false
+
+func _try_mission_step(has_moved: bool) -> MissionStepResult:
+	if not current_mission_intent.is_actionable():
+		return MissionStepResult.NONE
+	if current_mission_intent.kind == MissionIntentData.Kind.EXTRACT and _objective_manager.can_extract(unit):
+		battle_controller.record_ai_decision(unit, "Extract", current_mission_intent.zone_id, "Unit reached its mission extraction zone.", "Attack, Move, Defend", current_mission_intent.get_debug_label())
+		if _objective_manager.try_extract(unit):
+			await get_tree().process_frame
+			if turn_manager.battle_result == TurnManager.BattleResult.ONGOING and turn_manager.active_unit == null:
+				turn_manager.end_current_turn()
+			return MissionStepResult.EXTRACTED
+	if has_moved or current_mission_intent.kind not in [MissionIntentData.Kind.REACH, MissionIntentData.Kind.EXTRACT]:
+		return MissionStepResult.NONE
+
+	var destination := _nearest_reachable_zone_cell(current_mission_intent.zone_id)
+	if destination.x < 0:
+		return MissionStepResult.NONE
+	if await _move_toward_cell(destination):
+		battle_controller.record_ai_decision(unit, "Move", str(_last_move_destination), current_mission_intent.reason, "Attack, Defend", current_mission_intent.get_debug_label())
+		if is_instance_valid(unit) and current_mission_intent.kind == MissionIntentData.Kind.EXTRACT and _objective_manager.can_extract(unit):
+			battle_controller.record_ai_decision(unit, "Extract", current_mission_intent.zone_id, "Unit reached its mission extraction zone.", "Attack, Defend", current_mission_intent.get_debug_label())
+			if _objective_manager.try_extract(unit):
+				await get_tree().process_frame
+				if turn_manager.battle_result == TurnManager.BattleResult.ONGOING and turn_manager.active_unit == null:
+					turn_manager.end_current_turn()
+				return MissionStepResult.EXTRACTED
+		if current_mission_intent.kind == MissionIntentData.Kind.REACH:
+			# Objective outcomes are deferred so movement signals finish cleanly.
+			await get_tree().process_frame
+		return MissionStepResult.MOVED
+	return MissionStepResult.NONE
 
 func _on_debug_enemy_control_changed(enabled: bool) -> void:
 	if not enabled and turn_manager.current_phase == TurnManager.TurnPhase.ENEMY_TURN \
@@ -151,17 +194,24 @@ func _move_toward_cell(target_cell: Vector3i) -> bool:
 	for index in range(path.size() - 1, 0, -1):
 		var candidate := battle_controller.world_to_grid(path[index])
 		if reachable.has(candidate) and battle_controller.grid_manager.can_unit_occupy_cell(unit, candidate):
-			return await battle_controller.try_move(unit, candidate)
+			if await battle_controller.try_move(unit, candidate):
+				_last_move_destination = candidate
+				return true
 	return false
 
-func _nearest_extraction_cell() -> Vector3i:
-	var start := battle_controller.grid_manager.get_unit_grid(unit)
+func _nearest_reachable_zone_cell(zone_id: StringName) -> Vector3i:
+	var grid := battle_controller.grid_manager
+	var start := grid.get_unit_grid(unit)
 	var best := Vector3i(-1, -1, -1)
-	var distance := INF
-	for cell in battle_controller.grid_manager.map_data.get_objective_zone(&"extract"):
-		var candidate_distance := start.distance_squared_to(cell)
-		if candidate_distance < distance:
-			distance = candidate_distance
+	var shortest_path := INF
+	for cell in grid.map_data.get_objective_zone(zone_id):
+		if cell != start and not grid.can_unit_occupy_cell(unit, cell):
+			continue
+		var path := battle_controller.pathfinder.calculate_3d_path(start, cell)
+		if cell == start:
+			return cell
+		if not path.is_empty() and path.size() < shortest_path:
+			shortest_path = path.size()
 			best = cell
 	return best
 

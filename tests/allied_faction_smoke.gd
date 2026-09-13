@@ -24,7 +24,7 @@ func _check_setup_control() -> void:
 	await process_frame
 	check(setup.ally_count.value == 0, "Match setup defaults to no allied units")
 	setup.ally_count.value = 2
-	check("2 ALLIES" in setup.start_button.text, "Match summary displays the independent ally count")
+	check("AI allies: 2" in setup.deployment_summary.text, "Match summary displays the independent ally count")
 	setup.queue_free()
 	await process_frame
 
