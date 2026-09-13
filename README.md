@@ -67,7 +67,7 @@ The smoke tests load the real battle scene and check terrain data, shared player
 
 `MapValidator` checks the completed runtime `MapData` before combat starts. A valid map prints its cell, traversal-link, and spawn-cell totals. Invalid maps report stable issue codes and readable messages for invalid cells, path-state mismatches, stale LOS indexes, broken traversal links, bad or insufficient spawn cells, and disconnected opposing spawn zones. A failed validation leaves the battle in its transition state instead of starting on broken data.
 
-The match setup can launch a deterministic generated map. Enable `USE GENERATED MAP`, enter an integer seed, and start the battle. `FlatMapGenerator` creates the ground, faction spawn cells, and seeded tactical cover formations directly as `MapData`; `MapGraphBuilder` derives pathfinding from that data, validation approves it, and units spawn from its cells. Barricades, corners, low walls, and staggered positions rotate and move with the seed while cover density stays comparable. Reusing a seed reproduces both spawns and cover. Spawn bands and a central route remain clear. Vertical generation is intentionally deferred.
+The match setup can launch a deterministic generated map. Enable `USE GENERATED MAP`, enter an integer seed, and start the battle. `FlatMapGenerator` creates the ground, faction spawn cells, seeded tactical cover formations, and accessible rooftops directly as `MapData`; `MapGraphBuilder` derives pathfinding from that data, validation approves it, and units spawn from its cells. Barricades, corners, low walls, and staggered positions rotate and move with the seed while cover density stays comparable. Reusing a seed reproduces spawns, cover, and buildings. Spawn bands and a central route remain clear.
 
 Test the default batch of seeds 1 through 100 without opening a battle scene:
 
@@ -84,6 +84,18 @@ godot_console --headless --path . --script res://tests/map_generation_batch_smok
 The batch exits unsuccessfully and lists exact seeds and validation messages if any generated map is structurally invalid. It also rejects scattered layouts when fewer than 75% of cover cells have an orthogonally adjacent cover neighbor.
 
 ## Debug tools
+
+Generated maps offer Small (24×20), Medium (32×24), and Large (40×30) sizes in match setup. The size control is disabled for the handmade test map. Floor, grid lines, camera zoom and pan limits follow the selected dimensions.
+
+Blue steel containers occupy 3×2 cells (or the rotated 2×3 footprint), are 2 m tall, and block movement and shots. Their footprints are stored in MapData; visuals read the same cells used by combat. Container roofs are not walkable in this step. Container placement reserves surrounding space and the central corridor, and counts toward the existing cover budget. Seed reproducibility requires the same map size and generator version.
+
+Run `godot_console --headless --path . --script res://tests/container_maps_smoke.gd` to validate 100 seeds per size plus full-team runtime spawning and camera bounds.
+
+Generated maps place solid buildings with 3 m walkable roofs and a ground-to-roof ladder. `GeneratedBuildingExpansion` adds an alternate stair approach where space permits and gives each building a seeded 65% chance of a coherent 2×2 utility floor at 6 m, reached by a second ladder. Stairs use ordinary neighboring cells at heights 1 and 2; the existing one-level step rule connects them to ground and roof. Stairs and upper-floor walls block movement and LOS beneath their surfaces. Reserved approaches keep later cover placement clear. These are exterior routes; interiors, larger upper floors, and smooth generated ramps remain deferred while generation work is paused.
+
+Generated building presentation uses readable concrete walls, a recessed roof cap, doors, window panels, and rooftop utility details. The scene combines cool ambient fill with an angled warm directional light so opposing facades remain visible. These decorative pieces have no gameplay collision; movement, cover, and LOS still come exclusively from `MapData`.
+
+To playtest this 6D slice: run the project with **F5**, enable `USE GENERATED MAP`, choose Medium (32×24), enter seed `12345`, and start a battle. Move a unit to the steps, then click the roof to climb; compare this with the yellow ground ladder. From the roof, use the second ladder to reach the 2×2 utility floor. Check descent, AP use, and attacks at different heights. This seed should report 786 cells and 2 traversal links. Restart with the same size and seed to reproduce the layout. Run `godot_console --headless --path . --script res://tests/generated_buildings_smoke.gd` for 300 seeds plus runtime movement, AP, occupancy, and click-surface checks.
 
 The battle scene's `DebugTools` node exposes `Debug Tools Enabled` in the Inspector. When enabled, a small hint appears at the top right. Press **F3** or **Esc** to toggle the debug panel and pause or resume the battle; **Resume Battle** also closes it. `Show battle-data overlay` displays live round, phase, active-unit, coordinate, HP/AP, movement, range, map-cell, and occupancy data.
 

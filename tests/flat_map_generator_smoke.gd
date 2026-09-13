@@ -52,13 +52,16 @@ func _check_playable_generated_battle() -> void:
 	var battle: BattleController = level.battle_controller
 	var map_data: MapData = battle.grid_manager.map_data
 	check(map_data.source_kind == "generated_cover" and map_data.generation_seed == 4242, "Battle uses generated MapData")
-	check(map_data.cells.size() == 768 and map_data.traversal_links.is_empty(), "Playable generated map contains only its 32 by 24 ground layer")
+	check(map_data.cells.size() > 768 and not map_data.traversal_links.is_empty(), "Playable generated map includes elevated roof cells and access links")
 	check(battle.last_map_validation.is_valid(), "Generated battle validates before unit registration")
 	check(level.turn_manager.player_units.size() == 5 and level.turn_manager.enemy_units.size() == 5, "Generated spawn cells support 5v5")
 	check(battle.grid_manager.occupancy_map.size() == 10, "Generated units occupy ten unique cells")
 	var cover_counts := _cover_counts(map_data)
 	var generated_geometry := level.get_node("GeneratedTerrain")
-	check(generated_geometry.get_child_count() == cover_counts.x + cover_counts.y, "Every generated cover cell receives matching geometry")
+	var expected_structures := cover_counts.x + cover_counts.y - map_data.containers.size() * 5 - map_data.buildings.size() * 11
+	for building in map_data.buildings:
+		expected_structures -= building.stair_cells.size() + building.upper_cells.size()
+	check(generated_geometry.get_child_count() == expected_structures, "Multi-cell structures render once per data record")
 	for feature_node in level.get_tree().get_nodes_in_group("terrain_features"):
 		check(not (feature_node as Node3D).visible, "%s is hidden on generated terrain" % feature_node.name)
 	for unit in level.turn_manager.player_units:

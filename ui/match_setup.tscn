@@ -15,7 +15,7 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
-[node name="MatchSetup" type="Control" node_paths=PackedStringArray("player_count", "enemy_count", "ally_count", "start_button", "generated_map_toggle", "seed_input")]
+[node name="MatchSetup" type="Control" node_paths=PackedStringArray("player_count", "enemy_count", "ally_count", "start_button", "generated_map_toggle", "seed_input", "map_size_option")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -29,6 +29,7 @@ ally_count = NodePath("CenterContainer/Panel/Margin/VBox/Teams/AllySide/AllyCoun
 start_button = NodePath("CenterContainer/Panel/Margin/VBox/StartButton")
 generated_map_toggle = NodePath("CenterContainer/Panel/Margin/VBox/Generation/GeneratedMapToggle")
 seed_input = NodePath("CenterContainer/Panel/Margin/VBox/Generation/SeedInput")
+map_size_option = NodePath("CenterContainer/Panel/Margin/VBox/Generation/MapSize")
 battle_scene = ExtResource("2_battle")
 
 [node name="Background" type="ColorRect" parent="."]
@@ -142,6 +143,10 @@ text = "USE GENERATED MAP"
 [node name="SeedLabel" type="Label" parent="CenterContainer/Panel/Margin/VBox/Generation"]
 layout_mode = 2
 text = "GENERATION SEED"
+
+[node name="MapSize" type="OptionButton" parent="CenterContainer/Panel/Margin/VBox/Generation"]
+layout_mode = 2
+tooltip_text = "Generated battlefield size"
 
 [node name="SeedInput" type="SpinBox" parent="CenterContainer/Panel/Margin/VBox/Generation"]
 custom_minimum_size = Vector2(0, 42)

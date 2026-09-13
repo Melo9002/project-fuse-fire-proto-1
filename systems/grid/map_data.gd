@@ -2,6 +2,8 @@ class_name MapData
 extends RefCounted
 
 var cells: Dictionary = {}
+var containers: Array[Rect2i] = []
+var buildings: Array[GeneratedBuildingData] = []
 var columns: Dictionary = {}
 var traversal_links: Array[TraversalLinkData] = []
 var los_blocking_cells: Array[MapCellData] = []
@@ -60,6 +62,8 @@ func rebuild_los_index() -> void:
 			los_blocking_cells.append(cell)
 
 func clear() -> void:
+	containers.clear()
+	buildings.clear()
 	cells.clear()
 	columns.clear()
 	traversal_links.clear()

@@ -17,8 +17,10 @@ var enemy_unit_count: int = 2
 var allied_unit_count: int = 0
 var use_generated_map: bool = false
 var generation_seed: int = 1
+var generated_size := Vector2i(32, 24)
 
-func configure(player_count: int, enemy_count: int, generate_map: bool = false, map_seed: int = 1, ally_count: int = 0) -> void:
+func configure(player_count: int, enemy_count: int, generate_map: bool = false, map_seed: int = 1, ally_count: int = 0, map_size := Vector2i(32, 24)) -> void:
+	generated_size = map_size if FlatMapGenerator.MAP_SIZES.has(map_size) else Vector2i(32, 24)
 	player_unit_count = clampi(player_count, 1, 5)
 	enemy_unit_count = clampi(enemy_count, 1, 5)
 	allied_unit_count = clampi(ally_count, 0, 5)
@@ -29,6 +31,13 @@ func _ready() -> void:
 	if use_generated_map:
 		_set_authored_geometry_enabled(false)
 		var grid := battle_controller.grid_manager
+		grid.map_floor.size.x = generated_size.x * grid.cell_size
+		grid.map_floor.size.z = generated_size.y * grid.cell_size
+		(get_node("Visualizers/GridVisualizer") as GridVisualizer).generate_grid_lines()
+		var rig := get_node("CameraRig") as TacticalCamera
+		var scale_factor := maxf(float(generated_size.x) / 32.0, float(generated_size.y) / 24.0)
+		rig.max_zoom = 56.0 * maxf(1.0, scale_factor)
+		rig._set_zoom(42.0 * scale_factor)
 		var width := int(grid.map_floor.size.x / grid.cell_size)
 		var depth := int(grid.map_floor.size.z / grid.cell_size)
 		var generated_map := FlatMapGenerator.generate_with_cover(width, depth, grid.cell_size, generation_seed, 5)
@@ -40,7 +49,7 @@ func _ready() -> void:
 		_spawn_generated_team(allied_unit_count, TacticalUnit.Faction.ALLY, allied_units_parent, generated_map)
 		_spawn_generated_team(enemy_unit_count, TacticalUnit.Faction.ENEMY, enemy_units_parent, generated_map)
 		var cover_counts := _count_cover(generated_map)
-		print_rich("[color=cyan][MapGenerator][/color] COVER — seed %d, %dx%d, %d low, %d full" % [generation_seed, width, depth, cover_counts.x, cover_counts.y])
+		print_rich("[color=cyan][MapGenerator][/color] COVER — seed %d, %dx%d, %d low, %d full, %d building(s)" % [generation_seed, width, depth, cover_counts.x, cover_counts.y, generated_map.buildings.size()])
 		await battle_controller.initialize_battle(generated_map)
 	else:
 		_spawn_team(player_unit_count, player_spawn_zone, player_units_parent, false)
