@@ -27,6 +27,9 @@ func _run() -> void:
 	check(map_data.get_spawn_cells(TacticalUnit.Faction.PLAYER).size() == 5, "Player SpawnZone contributes five MapData cells")
 	check(map_data.get_spawn_cells(TacticalUnit.Faction.ENEMY).size() == 5, "Enemy SpawnZone contributes five MapData cells")
 	check(map_data.get_total_spawn_count() == 15, "Validation summary counts all faction spawn cells")
+	check(map_data.get_zones_by_kind(MapZoneData.Kind.DEPLOYMENT).size() == 3, "Faction spawns are represented as deployment zones")
+	check(map_data.get_zone(&"reach").kind == MapZoneData.Kind.OBJECTIVE, "Reach is represented as an objective zone")
+	check(map_data.get_zone(&"extract").kind == MapZoneData.Kind.EXTRACTION, "Extraction has its own zone kind")
 
 	var sample_cell: MapCellData = map_data.get_cell(Vector3i(0, 0, 0))
 	var original_cost := sample_cell.movement_cost
@@ -45,7 +48,14 @@ func _run() -> void:
 	map_data.add_spawn_cell(TacticalUnit.Faction.ENEMY, shared_spawn)
 	var duplicate_spawn := MapValidator.validate(map_data, pathfinder, requirements)
 	check(duplicate_spawn.has_code("DUPLICATE_SPAWN"), "Spawn positions must be unique across factions")
-	map_data.spawn_cells[TacticalUnit.Faction.ENEMY].pop_back()
+	map_data.get_zone(StringName("deployment_%d" % TacticalUnit.Faction.ENEMY)).cells.pop_back()
+
+	var reach_zone := map_data.get_zone(&"reach")
+	var original_reach := reach_zone.cells.duplicate()
+	reach_zone.cells = [Vector3i(999, 0, 999)]
+	var invalid_zone := MapValidator.validate(map_data, pathfinder, requirements)
+	check(invalid_zone.has_code("ZONE_CELL_MISSING"), "Zones cannot reference cells outside MapData")
+	reach_zone.cells = original_reach
 
 	var insufficient := MapValidator.validate(map_data, pathfinder, {TacticalUnit.Faction.PLAYER: 6, TacticalUnit.Faction.ENEMY: 5})
 	check(insufficient.has_code("INSUFFICIENT_SPAWNS"), "Requested team sizes must fit their spawn data")

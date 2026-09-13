@@ -94,7 +94,7 @@ func has_required_objective_failed() -> bool:
 
 func can_extract(unit: TacticalUnit) -> bool:
 	if not is_instance_valid(unit) or unit.is_moving or not _turn_manager or not _grid_manager: return false
-	if _turn_manager.active_unit != unit or (not _turn_manager.player_units.has(unit) and not _turn_manager.allied_units.has(unit)): return false
+	if not _turn_manager.player_units.has(unit) and not _turn_manager.allied_units.has(unit): return false
 	if not _grid_manager.map_data.get_objective_zone(&"extract").has(_grid_manager.get_unit_grid(unit)): return false
 	if mission.mission_id == &"prototype_survive" and not get_objective(&"survive").is_completed(): return false
 	return _has_extract_target(unit)
@@ -105,6 +105,9 @@ func should_seek_extraction(unit: TacticalUnit) -> bool:
 	return mission.mission_id != &"prototype_survive" or get_objective(&"survive").is_completed()
 
 func try_extract(unit: TacticalUnit) -> bool:
+	return ExtractAction.new(unit, self).execute()
+
+func complete_extraction(unit: TacticalUnit) -> bool:
 	if not can_extract(unit): return false
 	if unit.is_carrying_unit():
 		_record_vip_extraction(unit.carried_unit)
@@ -206,6 +209,9 @@ func _evaluate_outcome() -> void:
 	if not _turn_manager or _turn_manager.battle_result != TurnManager.BattleResult.ONGOING: return
 	if has_required_objective_failed():
 		_turn_manager.finish_battle(TurnManager.BattleResult.DEFEAT)
+		return
+	if mission.mission_id == &"prototype_extract" and extracted_units >= total_units and _all_vip_objectives_complete():
+		_turn_manager.finish_battle(TurnManager.BattleResult.VICTORY)
 		return
 	if are_required_objectives_complete():
 		if mission.mission_id != &"prototype_extract" or extracted_units >= total_units:

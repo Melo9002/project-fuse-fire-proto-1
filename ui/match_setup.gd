@@ -61,7 +61,7 @@ func _build_objective_setup() -> void:
 	var label := Label.new()
 	label.text = "MISSION OBJECTIVE"
 	objective_option = OptionButton.new()
-	objective_option.tooltip_text = "Choose the mission rule to test. Objective victory is added in Task 18C."
+	objective_option.tooltip_text = "Choose the mission rules for this battle."
 	for objective_name in MissionCatalog.get_preset_names():
 		objective_option.add_item(objective_name)
 	objective_option.item_selected.connect(_on_objective_selected)
@@ -71,12 +71,10 @@ func _build_objective_setup() -> void:
 	$CenterContainer/Panel/Margin/VBox.move_child(box, 4)
 
 func _on_objective_selected(index: int) -> void:
-	var needs_vip := index == MissionObjectiveDefinition.Kind.PROTECT or index == MissionObjectiveDefinition.Kind.EXTRACT
+	var needs_vip := index == MissionObjectiveDefinition.Kind.PROTECT
 	vip_toggle.disabled = needs_vip
 	if needs_vip:
 		vip_toggle.button_pressed = true
-	if index == MissionObjectiveDefinition.Kind.EXTRACT:
-		vip_behavior.select(MissionActor.VIPBehavior.PLAYER_CONTROLLED)
 	_update_summary(0.0)
 
 func _update_summary(_value: float) -> void:
@@ -101,7 +99,7 @@ func _start_battle() -> void:
 		FlatMapGenerator.MAP_SIZES[map_size_option.selected],
 		vip_toggle.button_pressed,
 		vip_behavior.selected,
-		MissionCatalog.create_mission(objective_option.selected, int(enemy_count.value))
+		MissionCatalog.create_mission(objective_option.selected, int(enemy_count.value), vip_toggle.button_pressed)
 	)
 	get_tree().root.add_child(battle)
 	get_tree().current_scene = battle

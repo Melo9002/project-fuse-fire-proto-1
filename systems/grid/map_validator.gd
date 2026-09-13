@@ -13,6 +13,7 @@ static func validate(map_data: MapData, pathfinder: Pathfinder, required_spawn_c
 	_validate_cells(map_data, pathfinder, result)
 	_validate_los_index(map_data, result)
 	_validate_links(map_data, pathfinder, result)
+	_validate_zones(map_data, result)
 	_validate_spawns(map_data, pathfinder, required_spawn_counts, result)
 	return result
 
@@ -79,7 +80,7 @@ static func _validate_links(map_data: MapData, pathfinder: Pathfinder, result: M
 
 static func _validate_spawns(map_data: MapData, pathfinder: Pathfinder, required_counts: Dictionary, result: MapValidationResult) -> void:
 	var occupied_spawn_cells: Dictionary = {}
-	for faction in map_data.spawn_cells:
+	for faction in [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ENEMY, TacticalUnit.Faction.ALLY, TacticalUnit.Faction.NEUTRAL]:
 		var faction_cells: Array[Vector3i] = map_data.get_spawn_cells(faction)
 		for cell_position in faction_cells:
 			if occupied_spawn_cells.has(cell_position):
@@ -117,3 +118,21 @@ static func _validate_spawns(map_data: MapData, pathfinder: Pathfinder, required
 					if map_data.has_cell(first_cell) and map_data.has_cell(second_cell) \
 						and pathfinder.calculate_3d_path(first_cell, second_cell).is_empty():
 						result.add_error("SPAWNS_DISCONNECTED", "Hostile spawn cells do not share a route: %s -> %s." % [first_cell, second_cell])
+
+static func _validate_zones(map_data: MapData, result: MapValidationResult) -> void:
+	for zone in map_data.zones.values():
+		if not zone or zone.zone_id.is_empty():
+			result.add_error("INVALID_ZONE", "A map zone is missing its identity data.")
+			continue
+		if zone.cells.is_empty():
+			result.add_error("EMPTY_ZONE", "Zone %s contains no cells." % zone.zone_id)
+		var seen: Dictionary[Vector3i, bool] = {}
+		for position in zone.cells:
+			if seen.has(position):
+				result.add_error("DUPLICATE_ZONE_CELL", "Zone %s repeats a cell." % zone.zone_id, position, true)
+			seen[position] = true
+			var cell := map_data.get_cell(position)
+			if not cell:
+				result.add_error("ZONE_CELL_MISSING", "Zone %s references a cell outside the battlefield." % zone.zone_id, position, true)
+			elif not cell.walkable or not cell.can_stop:
+				result.add_error("ZONE_CELL_INVALID", "Zone %s must use walkable stopping cells." % zone.zone_id, position, true)

@@ -118,14 +118,16 @@ The VIP is additional to the selected player combatants and reserves one allied 
 2. **Reach:** immediate victory when a player or AI ally reaches the zone.
 3. **Protect:** eliminate all enemies while every protected ally/VIP survives; losing one causes defeat.
 4. **Rescue:** approaching the neutral VIP picks them up; the carrier moves more slowly and must extract while carrying them. Once the VIP is being carried, other friendly units may also evacuate.
-5. **Extract:** every living player or allied unit can evacuate individually. Dead units leave the required pool. All VIPs must extract for victory; after at least one ordinary unit extracts, the player may end early and leave others behind. Extracting everyone ends automatically.
+5. **Extract:** every living player or allied unit can evacuate individually through a zero-AP action. Dead units leave the required pool. A VIP is required only when enabled in match setup. All included VIPs must extract; after at least one ordinary unit extracts, the player may end early and leave others behind. Extracting everyone ends automatically.
 6. **Survive:** survive three rounds, then evacuate every remaining unit; early departure is disabled.
 
 Mission and objective definitions are Godot Resources, so future missions can save required and optional objectives as data. Each battle receives separate runtime state with progress plus active, completed, or failed status. `ObjectiveManager` validates the definitions, observes battle events, and applies the selected mission's victory and defeat rules.
 
 The setup menu offers Eliminate, Protect, Rescue, Reach, Survive, and Extract presets. Starting the battle loads the selected definition and prints an `[Objectives] ACTIVE` message with its kind, requirement, and target. Progress, completion, and failure also print as objective events.
 
-The temporary top-right objective readout shows every required and optional objective, its status, and its progress. Selecting a player-controlled unit on the green zone reveals an **EXTRACT** button beside that unit. Extract missions also expose **End Mission** after at least one ordinary unit and every VIP are safe.
+The temporary top-right objective readout shows every required and optional objective, its status, and its progress. Any player-controlled unit standing in the green zone receives an **EXTRACT** button beside it, including exhausted units. Extract missions also expose **End Mission** after at least one ordinary unit and every included VIP are safe.
+
+Deployment, objective, and extraction areas share one `MapZoneData` format inside `MapData`. Each zone has an ID, kind, cells, and an optional owning faction. Map validation rejects empty zones, repeated coordinates, missing cells, and terrain where a unit cannot legally stop. Authored scenes and generated maps therefore supply the same mission-space data.
 
 `Manual enemy control` stops automatic enemy decisions. During each enemy activation, use the ordinary Move, Attack, and Defend buttons, then press End Turn to advance the enemy queue. `AI controls both teams` is a hands-off simulation mode and cannot be active together with manual enemy control.
 

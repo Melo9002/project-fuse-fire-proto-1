@@ -21,7 +21,7 @@ func _run() -> void:
 
 func _create_level(kind: MissionObjectiveDefinition.Kind, include_vip := false, player_count := 1) -> BattleLevel:
 	var level := load("res://levels/prototype_map/prototype_map.tscn").instantiate() as BattleLevel
-	level.configure(player_count, 2, false, 1, 0, Vector2i(32, 24), include_vip, MissionActor.VIPBehavior.PLAYER_CONTROLLED, MissionCatalog.create_mission(kind, 2))
+	level.configure(player_count, 2, false, 1, 0, Vector2i(32, 24), include_vip, MissionActor.VIPBehavior.PLAYER_CONTROLLED, MissionCatalog.create_mission(kind, 2, include_vip))
 	root.add_child(level)
 	await create_timer(0.15).timeout
 	return level
@@ -97,22 +97,16 @@ func _check_rescue() -> void:
 	await _finish(level)
 
 func _check_extract() -> void:
-	var level := await _create_level(MissionObjectiveDefinition.Kind.EXTRACT, true, 2)
+	var level := await _create_level(MissionObjectiveDefinition.Kind.EXTRACT, false, 2)
 	check(not level.objective_manager.should_seek_extraction(level.turn_manager.enemy_units[0]), "Enemies never seek the player's extraction zone")
-	var vip := level.turn_manager.player_units.filter(func(unit): return unit.get_mission_id() == &"FriendlyVIP")[0] as TacticalUnit
-	var destination := level.battle_controller.grid_manager.map_data.get_objective_zone(&"extract")[0]
-	check(not level.objective_manager.try_extract(vip), "Extract is rejected outside its zone")
-	level.battle_controller.grid_manager.update_unit_position(vip, vip.grid_position, destination)
-	check(not level.objective_manager.can_extract(vip), "A non-active VIP cannot extract")
-	check(level.turn_manager.select_player_unit(vip), "The player can select the VIP for extraction")
-	check(level.objective_manager.can_extract(vip), "Extract becomes available for its active VIP in the zone")
-	check(level.objective_manager.try_extract(vip), "The explicit Extract action evacuates the VIP")
-	await process_frame
-	check(level.turn_manager.battle_result == TurnManager.BattleResult.ONGOING, "VIP extraction alone does not finish while the squad remains")
-	var regular := level.turn_manager.player_units[0]
-	level.battle_controller.grid_manager.update_unit_position(regular, regular.grid_position, destination)
-	check(level.objective_manager.try_extract(regular), "An ordinary active unit can extract individually")
-	check(level.objective_manager.can_end_mission_early(), "One extracted unit unlocks early mission ending after the VIP is safe")
+	check(level.objective_manager.get_objective(&"extract_vips") == null, "Extract missions do not require a VIP unless one was enabled")
+	var destinations := level.battle_controller.grid_manager.map_data.get_objective_zone(&"extract")
+	var exhausted := level.turn_manager.player_units[1]
+	exhausted.stats.current_ap = 0
+	level.battle_controller.grid_manager.update_unit_position(exhausted, exhausted.grid_position, destinations[0])
+	check(level.objective_manager.can_extract(exhausted), "An exhausted non-active unit may use the zero-AP Extract action")
+	check(level.objective_manager.try_extract(exhausted), "The shared Extract action evacuates an eligible unit")
+	check(level.objective_manager.can_end_mission_early(), "One extracted unit unlocks early mission ending")
 	check(level.objective_manager.end_mission_early(), "The player can end early and leave a living unit behind")
-	check(level.objective_manager.get_result_report() == "VIPs extracted 1/1 | Units extracted 1/2", "The mission report retains extraction consequences")
+	check(level.objective_manager.get_result_report() == "VIPs extracted 0/0 | Units extracted 1/2", "The mission report retains extraction consequences")
 	await _finish(level)

@@ -16,7 +16,7 @@ static func get_preset_names() -> Array[String]:
 		names.append(preset.title)
 	return names
 
-static func create_mission(preset_index: int, enemy_count: int) -> MissionDefinition:
+static func create_mission(preset_index: int, enemy_count: int, include_vip := false) -> MissionDefinition:
 	var safe_index := clampi(preset_index, 0, PRESETS.size() - 1)
 	var preset: Dictionary = PRESETS[safe_index]
 	var mission := MissionDefinition.new()
@@ -32,7 +32,9 @@ static func create_mission(preset_index: int, enemy_count: int) -> MissionDefini
 		MissionObjectiveDefinition.Kind.EXTRACT:
 			var squad := _objective(&"extract_units", MissionObjectiveDefinition.Kind.EXTRACT, "Extract Units", 1)
 			squad.required = false
-			mission.objectives = [_objective(&"extract_vips", MissionObjectiveDefinition.Kind.EXTRACT, "Extract VIPs", 1, [&"FriendlyVIP"]), squad]
+			mission.objectives = [squad]
+			if include_vip:
+				mission.objectives.push_front(_objective(&"extract_vips", MissionObjectiveDefinition.Kind.EXTRACT, "Extract VIPs", 1, [&"FriendlyVIP"]))
 		_:
 			var target := enemy_count if preset.kind == MissionObjectiveDefinition.Kind.ELIMINATE else 1
 			var ids: Array[StringName] = []
