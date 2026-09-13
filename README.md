@@ -45,7 +45,7 @@ Match setup supports zero to five green AI allies. Turns proceed from player to 
 
 The 32×24 test battlefield is a systems lab: separated 5v5 spawn zones, long firing lanes, a central gate complex, a southern vault course, twin platforms, a three-route high platform, and stacked decks that allow units above and below the same X/Z position.
 
-Friendly units currently have an 8-tile attack range to make cover testing easier. Enemy units retain the prototype's 3-tile range.
+All combatant Beans currently use a shared 10-tile attack range to make cover and visibility testing easier. A future weapon definition will supply each unit's effective range and damage.
 
 ## Verify changes
 
@@ -138,6 +138,6 @@ Deployment, objective, and extraction areas share one `MapZoneData` format insid
 
 `Manual enemy control` stops automatic enemy decisions. During each enemy activation, use the ordinary Move, Attack, and Defend buttons, then press End Turn to advance the enemy queue. `AI controls both teams` is a hands-off simulation mode and cannot be active together with manual enemy control.
 
-`Show shot trajectories` draws the exact body-center line used by combat validation while Attack mode is active and a unit is hovered. Green is a legal clear shot, amber is a legal low-cover shot, and red is illegal. Illegal trajectories remain visible through geometry to reveal where the path crosses an obstacle.
+`Show shot trajectories` draws the selected visible aim line used by combat validation while Attack mode is active and a unit is hovered. Combat samples five points scaled to the target's standing height. Green is a fully clear shot, amber is a legal covered or partially obstructed shot, and red is illegal. Illegal trajectories remain visible through geometry to reveal where the path crosses an obstacle.
 
 When a shot is blocked, its LOS cell is covered by a translucent red marker. The battle-data overlay reports that cell's coordinate, cover type, and height. `Show AI decision explanations` displays the latest automated actor, chosen action and subject, reason, and actions it considered as alternatives.

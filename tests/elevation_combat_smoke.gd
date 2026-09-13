@@ -38,7 +38,9 @@ func _run() -> void:
 	grid.map_data.add_cell(MapCellData.new(elevated_attacker, grid.grid_to_world(elevated_attacker)))
 	place(attacker, elevated_attacker, grid)
 	place(target, Vector3i(18, 0, 8), grid)
-	check(not battle.evaluate_attack(attacker, target).is_legal, "A descending shot through a full-height wall is blocked")
+	var descending_shot = battle.evaluate_attack(attacker, target)
+	check(descending_shot.is_legal and descending_shot.hit_chance < 100, "An elevated attacker can take a penalized partial shot over a full-height wall")
+	check(descending_shot.visibility_fraction > 0.0 and descending_shot.visibility_fraction < 1.0, "Descending fire reports the visible fraction of the target")
 
 	var elevated_target := Vector3i(18, 2, 8)
 	grid.map_data.add_cell(MapCellData.new(elevated_target, grid.grid_to_world(elevated_target)))

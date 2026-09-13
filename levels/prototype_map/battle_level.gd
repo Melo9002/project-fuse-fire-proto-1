@@ -13,7 +13,7 @@ extends Node3D
 @export var battle_controller: BattleController
 @export var objective_manager: ObjectiveManager
 @export var objective_zone_visualizer: ObjectiveZoneVisualizer
-@export_range(1, 20, 1) var test_battle_attack_range: int = 5
+@export_range(1, 20, 1) var test_battle_attack_range: int = 10
 
 var player_unit_count: int = 2
 var enemy_unit_count: int = 2

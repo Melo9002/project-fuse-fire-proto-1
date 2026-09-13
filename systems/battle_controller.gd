@@ -158,10 +158,12 @@ func _update_attack_preview() -> void:
 		if is_instance_valid(hovered) and hovered != tactical_unit:
 			var evaluation = evaluate_attack(tactical_unit, hovered)
 			preview = "%d%% HIT" % evaluation.hit_chance if evaluation.is_legal else evaluation.reason.to_upper()
+			if evaluation.is_legal and evaluation.obstruction != "Clear":
+				preview += " — %s" % evaluation.obstruction.to_upper()
 			if shot_trajectory_visualizer:
 				shot_trajectory_visualizer.draw_trajectory(
 					CombatRules.get_shot_origin(tactical_unit, grid_manager),
-					CombatRules.get_shot_destination(hovered, grid_manager),
+					evaluation.aim_point,
 					evaluation
 				)
 				trajectory_drawn = true
@@ -304,8 +306,8 @@ func try_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:
 		return false
 	var evaluation = evaluate_attack(attacker, target)
 	if debug_shots:
-		var blocker = CombatRules.get_blocking_cell(attacker.global_position, target.global_position, grid_manager)
-		print("[Shot] ", attacker.name, " ", grid_manager.get_unit_grid(attacker), " -> ", target.name, " ", grid_manager.get_unit_grid(target), " legal=", evaluation.is_legal, " chance=", evaluation.hit_chance, " reason=", evaluation.reason)
+		var blocker = evaluation.blocking_cell
+		print("[Shot] ", attacker.name, " ", grid_manager.get_unit_grid(attacker), " -> ", target.name, " ", grid_manager.get_unit_grid(target), " legal=", evaluation.is_legal, " chance=", evaluation.hit_chance, " visibility=", evaluation.obstruction, " reason=", evaluation.reason)
 		if blocker:
 			print("[Shot] blocker=", blocker.grid_position, " cover=", blocker.cover_type, " height=", blocker.cover_height, " walkable=", blocker.walkable)
 	if not evaluation.is_legal:

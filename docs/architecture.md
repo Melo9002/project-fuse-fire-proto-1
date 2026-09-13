@@ -140,13 +140,13 @@ A **signal** is an announcement: `ap_changed` lets UI update without stats knowi
 
 ## Follow an attack and a round
 
-Attack mode makes an enemy click call `BattleController.try_attack()`. `CombatRules.evaluate_attack()` returns legality, hit chance, directional cover, and a reason. Clear shots have 100% accuracy, low cover on the target-facing edge gives 50%, and full cover intersecting the line makes the attack illegal. `AttackAction` spends AP and resolves the roll; hits deal full damage and misses deal none. AI attacks use the same controller entry point.
+Attack mode makes an enemy click call `BattleController.try_attack()`. `CombatRules.evaluate_attack()` returns legality, hit chance, directional cover, target visibility, a visible aim point, and a reason. It samples five points scaled from the target's standing height. No visible samples blocks the attack; partial visibility applies a discrete obstruction penalty. Directional cover and obstruction use the stronger single penalty so one obstacle is not counted twice. `AttackAction` spends AP and resolves the roll; hits deal full damage and misses deal none. AI attacks use the same evaluation and controller entry point.
 
-Line of sight reads the terrain description rather than using pathfinding or raw obstacle collisions. Each blocking cell forms a vertical volume from its terrain elevation through its declared cover height. Combat tests the 3D segment between the attacker and target body centers against those volumes. A shot can therefore pass above a wall, while a descending shot that crosses the same wall remains blocked.
+Line of sight reads the terrain description rather than using pathfinding or raw obstacle collisions. Each cell with physical cover height forms a vertical volume from its terrain elevation through that height. Combat tests segments from the attacker's standing-height origin to the target samples against those volumes. A shot can therefore pass above a wall, and an elevated attacker may receive a penalized partial shot when only part of a lower target is visible.
 
 `MapData.los_blocking_cells` indexes only terrain that can stop a shot. Map construction rebuilds this index after applying authored features; dynamic terrain should rebuild it after changing LOS flags or heights.
 
-Attack previews derive the destination body center from the same elevated grid cell used by target validation. Low cover is directional and queried on the target's elevation layer, so ground cover does not protect a unit standing on a platform. Touching only the outer boundary or corner of an obstacle does not block a shot.
+Attack previews use the evaluation's first visible target sample, so the debug trajectory shows a line the shot can actually take. Blocked previews retain the target center and identify the first blocking cell. Low cover is directional and queried on the target's elevation layer, so ground cover does not protect a unit standing on a platform. Touching only the outer boundary or corner of an obstacle does not block a shot.
 
 Authored obstacles declare their cover type and physical height. The current map uses bright 1 m low cover and darker 2 m full cover. Enable `Debug Shots` on `BattleController` to log attempted targets, legality, chance, and the blocking terrain cell when present.
 

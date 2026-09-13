@@ -24,8 +24,8 @@ func _run() -> void:
 	var trajectory := level.get_node("Visualizers/ShotTrajectoryVisualizer") as ShotTrajectoryVisualizer
 	var attacker = battle.turn_manager.player_units[0]
 	var target = battle.turn_manager.enemy_units[0]
-	check(attacker.attack_range == 5, "Friendly units use the configured test range")
-	check(target.attack_range == 5, "Enemies use the same configured test range")
+	check(attacker.attack_range == 10, "Friendly units use the configured test range")
+	check(target.attack_range == 10, "Enemies use the same configured test range")
 	var mismatches := 0
 	var small_block = grid.get_cell_data(Vector3i(18, 0, 14))
 	place(attacker, Vector3i(17, 0, 14), grid)
@@ -83,6 +83,32 @@ func _run() -> void:
 	place(attacker, Vector3i(9, 0, 10), grid)
 	var wrong_side = battle.evaluate_attack(attacker, target)
 	check(wrong_side.is_legal and wrong_side.hit_chance == 100, "Cover does not protect the wrong side")
+
+	# Intervening geometry affects accuracy even when it is not the target's directional cover.
+	var corridor_cells: Array[MapCellData] = [
+		grid.get_cell_data(Vector3i(4, 0, 5)),
+		grid.get_cell_data(Vector3i(5, 0, 5)),
+		grid.get_cell_data(Vector3i(6, 0, 5)),
+	]
+	var saved_cover_types: Array[int] = []
+	var saved_heights: Array[float] = []
+	for cell in corridor_cells:
+		saved_cover_types.append(cell.cover_type)
+		saved_heights.append(cell.cover_height)
+		cell.cover_type = MapCellData.CoverType.NONE
+		cell.cover_height = 0.0
+	var intervening := corridor_cells[1]
+	place(attacker, Vector3i(3, 0, 5), grid)
+	place(target, Vector3i(7, 0, 5), grid)
+	intervening.cover_type = MapCellData.CoverType.LOW
+	intervening.cover_height = 1.0
+	var obstructed := battle.evaluate_attack(attacker, target)
+	check(obstructed.is_legal and obstructed.hit_chance < 100, "An intervening waist-high barrier reduces accuracy")
+	check(obstructed.visibility_fraction > 0.0 and obstructed.visibility_fraction < 1.0, "Attack evaluation reports partial target visibility")
+	check(obstructed.aim_point.y > intervening.world_position.y + intervening.cover_height, "The selected aim point clears the intervening barrier")
+	for index in corridor_cells.size():
+		corridor_cells[index].cover_type = saved_cover_types[index]
+		corridor_cells[index].cover_height = saved_heights[index]
 
 	attacker.attack_range = 6
 	place(attacker, Vector3i(14, 0, 8), grid)
