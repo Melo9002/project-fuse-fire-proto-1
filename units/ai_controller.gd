@@ -48,6 +48,10 @@ func _execute_turn() -> void:
 	if not _should_control_unit():
 		_is_executing = false
 		return
+	if unit.mission_actor and unit.mission_actor.is_vip():
+		await _execute_vip_turn()
+		_is_executing = false
+		return
 	var has_moved := false
 	while is_instance_valid(unit) and unit.stats.current_ap > 0 \
 		and turn_manager.battle_result == TurnManager.BattleResult.ONGOING \
@@ -90,10 +94,20 @@ func _should_control_unit() -> bool:
 	if turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN:
 		return unit.faction == TacticalUnit.Faction.PLAYER and battle_controller.debug_player_ai
 	if turn_manager.current_phase == TurnManager.TurnPhase.ALLY_TURN:
-		return unit.faction == TacticalUnit.Faction.ALLY
+		return turn_manager.allied_units.has(unit)
 	if turn_manager.current_phase == TurnManager.TurnPhase.ENEMY_TURN:
 		return unit.faction == TacticalUnit.Faction.ENEMY and not battle_controller.debug_enemy_control
 	return false
+
+func _execute_vip_turn() -> void:
+	if unit.mission_actor.vip_behavior == MissionActor.VIPBehavior.FOLLOW_ESCORT:
+		var escorts := turn_manager.player_units.filter(func(candidate: TacticalUnit): return candidate.mission_actor == null or not candidate.mission_actor.is_vip())
+		if not escorts.is_empty():
+			await _move_toward(escorts[0])
+	if unit.stats.current_ap > 0:
+		battle_controller.try_defend(unit)
+	if _should_control_unit():
+		turn_manager.end_current_turn()
 
 func _move_toward(target: TacticalUnit) -> bool:
 	var start_cell = battle_controller.grid_manager.get_unit_grid(unit)

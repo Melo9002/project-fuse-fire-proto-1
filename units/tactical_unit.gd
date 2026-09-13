@@ -11,12 +11,22 @@ signal defeated(unit: TacticalUnit)
 @export var attack_range: int = 3
 @export var faction: Faction = Faction.PLAYER
 @export var stats: UnitStats
+@export var mission_actor: MissionActor
 @export var unit_hud_scene: PackedScene = preload("res://ui/unit_world_bar.tscn")
 
 var current_path: PackedVector3Array = PackedVector3Array()
 var grid_position: Vector3i = Vector3i.ZERO
 var current_waypoint_idx: int = 0
 var is_moving: bool = false
+
+func get_mission_id() -> StringName:
+	return mission_actor.mission_id if mission_actor else StringName(name)
+
+func get_mission_actor_kind() -> MissionActor.Kind:
+	return mission_actor.kind if mission_actor else MissionActor.Kind.COMBATANT
+
+func can_extract_others() -> bool:
+	return mission_actor != null and mission_actor.can_extract_others()
 
 func _ready() -> void:
 	if stats:

@@ -4,7 +4,7 @@ class_name PathVisualizer
 @export var grid_manager: GridManager
 @export_range(0.0, 0.3, 0.01) var tile_padding: float = 0.08
 
-@export var range_color: Color = Color(1, 1, 0, 0.3)
+@export var range_color: Color = Color(0.55, 0.32, 0.0, 0.65)
 @export var path_color: Color = Color(0, 0.5, 1, 0.5)
 
 var range_mesh_instance: MeshInstance3D

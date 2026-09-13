@@ -9,8 +9,11 @@ extends Control
 @export var seed_input: SpinBox
 @export var map_size_option: OptionButton
 @export var battle_scene: PackedScene
+var vip_toggle: CheckButton
+var vip_behavior: OptionButton
 
 func _ready() -> void:
+	_build_vip_setup()
 	var size_names := ["Small", "Medium", "Large"]
 	for index in FlatMapGenerator.MAP_SIZES.size():
 		var dimensions := FlatMapGenerator.MAP_SIZES[index]
@@ -26,9 +29,34 @@ func _ready() -> void:
 	seed_input.editable = generated_map_toggle.button_pressed
 	_update_summary(0.0)
 
+func _build_vip_setup() -> void:
+	var box := VBoxContainer.new()
+	box.name = "VIPSetup"
+	vip_toggle = CheckButton.new()
+	vip_toggle.text = "INCLUDE FRIENDLY VIP"
+	vip_behavior = OptionButton.new()
+	for label in ["Player Controlled", "Follow Escort", "Hold Position"]:
+		vip_behavior.add_item(label)
+	vip_behavior.disabled = true
+	vip_toggle.toggled.connect(func(enabled: bool):
+		vip_behavior.disabled = not enabled
+		ally_count.max_value = 4.0 if enabled else 5.0
+		ally_count.value = minf(ally_count.value, ally_count.max_value)
+		_update_summary(0.0)
+	)
+	vip_behavior.item_selected.connect(func(_index: int):
+		if vip_toggle.button_pressed and vip_behavior.selected != MissionActor.VIPBehavior.PLAYER_CONTROLLED and player_count.value < 2:
+			player_count.value = 2
+	)
+	box.add_child(vip_toggle)
+	box.add_child(vip_behavior)
+	$CenterContainer/Panel/Margin/VBox.add_child(box)
+	$CenterContainer/Panel/Margin/VBox.move_child(box, 3)
+
 func _update_summary(_value: float) -> void:
 	var map_label := "GENERATED" if generated_map_toggle.button_pressed else "HANDMADE"
-	start_button.text = "START %d + %d ALLIES VS %d — %s" % [int(player_count.value), int(ally_count.value), int(enemy_count.value), map_label]
+	var vip_label := " + VIP" if vip_toggle and vip_toggle.button_pressed else ""
+	start_button.text = "START %d%s + %d ALLIES VS %d — %s" % [int(player_count.value), vip_label, int(ally_count.value), int(enemy_count.value), map_label]
 
 func _on_generation_toggled(enabled: bool) -> void:
 	map_size_option.disabled = not enabled
@@ -43,7 +71,9 @@ func _start_battle() -> void:
 		generated_map_toggle.button_pressed,
 		int(seed_input.value),
 		int(ally_count.value),
-		FlatMapGenerator.MAP_SIZES[map_size_option.selected]
+		FlatMapGenerator.MAP_SIZES[map_size_option.selected],
+		vip_toggle.button_pressed,
+		vip_behavior.selected
 	)
 	get_tree().root.add_child(battle)
 	get_tree().current_scene = battle

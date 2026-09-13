@@ -99,6 +99,17 @@ To playtest this 6D slice: run the project with **F5**, enable `USE GENERATED MA
 
 The battle scene's `DebugTools` node exposes `Debug Tools Enabled` in the Inspector. When enabled, a small hint appears at the top right. Press **F3** or **Esc** to toggle the debug panel and pause or resume the battle; **Resume Battle** also closes it. `Show battle-data overlay` displays live round, phase, active-unit, coordinate, HP/AP, movement, range, map-cell, and occupancy data.
 
+## Mission actors
+
+Every tactical unit has a `MissionActor` component. Faction controls relationships and targeting; the mission actor independently identifies a `COMBATANT`, `VIP`, or `RESCUABLE` and whether that actor can extract others. Spawned units receive unique mission IDs, while existing Beans remain ordinary combatants. Enable the debug overlay to inspect the active unit's mission ID and role. Objectives and extraction behavior are intentionally separate future tasks.
+
+The VIP is additional to the selected player combatants and reserves one allied spawn slot. Enabling it therefore permits up to four ordinary AI allies.
+
+1. **Player Controlled:** appears in the portrait bar and uses normal player actions.
+2. **Follow Escort:** activates during the allied phase, approaches a player combatant, then defends.
+3. **Hold Position:** remains on its spawn tile and defends.
+4. AI-controlled modes require at least two friendly slots so the VIP has an escort.
+
 `Manual enemy control` stops automatic enemy decisions. During each enemy activation, use the ordinary Move, Attack, and Defend buttons, then press End Turn to advance the enemy queue. `AI controls both teams` is a hands-off simulation mode and cannot be active together with manual enemy control.
 
 `Show shot trajectories` draws the exact body-center line used by combat validation while Attack mode is active and a unit is hovered. Green is a legal clear shot, amber is a legal low-cover shot, and red is illegal. Illegal trajectories remain visible through geometry to reveal where the path crosses an obstacle.

@@ -212,6 +212,11 @@ func _update_overlay() -> void:
 	var active := turn_manager.active_unit
 	if is_instance_valid(active) and active.stats:
 		lines.append("Active: %s  |  %s" % [active.name, TacticalUnit.Faction.keys()[active.faction]])
+		lines.append("Mission: %s  |  %s%s" % [
+			active.get_mission_id(),
+			MissionActor.Kind.keys()[active.get_mission_actor_kind()],
+			"  |  EXTRACTOR" if active.can_extract_others() else "",
+		])
 		lines.append("Cell: %s  |  HP: %d/%d  |  AP: %d/%d" % [grid_manager.get_unit_grid(active), active.stats.current_hp, active.stats.max_hp, active.stats.current_ap, active.stats.max_ap])
 		lines.append("Move: %d  |  Range: %d" % [active.stats.speed, active.attack_range])
 	if battle_controller and battle_controller.debug_enemy_control:

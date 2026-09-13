@@ -2,16 +2,18 @@
 
 [ext_resource type="Script" uid="uid://dbww1fki3xm5f" path="res://units/tactical_unit.gd" id="1_bwycf"]
 [ext_resource type="Script" uid="uid://bkh6dyrmx6y7k" path="res://scripts/components/unit_stats.gd" id="2_2equr"]
+[ext_resource type="Script" path="res://scripts/components/mission_actor.gd" id="3_mission_actor"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_8x357"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_8x357"]
 
-[node name="TacticalUnit" type="CharacterBody3D" unique_id=225498665 node_paths=PackedStringArray("stats")]
+[node name="TacticalUnit" type="CharacterBody3D" unique_id=225498665 node_paths=PackedStringArray("stats", "mission_actor")]
 collision_layer = 4
 collision_mask = 3
 script = ExtResource("1_bwycf")
 stats = NodePath("UnitStats")
+mission_actor = NodePath("MissionActor")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1078393390]
 mesh = SubResource("CapsuleMesh_8x357")
@@ -21,3 +23,6 @@ shape = SubResource("CapsuleShape3D_8x357")
 
 [node name="UnitStats" type="Node" parent="." unique_id=1674905690]
 script = ExtResource("2_2equr")
+
+[node name="MissionActor" type="Node" parent="."]
+script = ExtResource("3_mission_actor")

@@ -18,14 +18,18 @@ var allied_unit_count: int = 0
 var use_generated_map: bool = false
 var generation_seed: int = 1
 var generated_size := Vector2i(32, 24)
+var include_vip := false
+var vip_behavior := MissionActor.VIPBehavior.PLAYER_CONTROLLED
 
-func configure(player_count: int, enemy_count: int, generate_map: bool = false, map_seed: int = 1, ally_count: int = 0, map_size := Vector2i(32, 24)) -> void:
+func configure(player_count: int, enemy_count: int, generate_map: bool = false, map_seed: int = 1, ally_count: int = 0, map_size := Vector2i(32, 24), add_vip: bool = false, behavior: MissionActor.VIPBehavior = MissionActor.VIPBehavior.PLAYER_CONTROLLED) -> void:
 	generated_size = map_size if FlatMapGenerator.MAP_SIZES.has(map_size) else Vector2i(32, 24)
 	player_unit_count = clampi(player_count, 1, 5)
 	enemy_unit_count = clampi(enemy_count, 1, 5)
 	allied_unit_count = clampi(ally_count, 0, 5)
 	use_generated_map = generate_map
 	generation_seed = map_seed
+	include_vip = add_vip
+	vip_behavior = behavior
 
 func _ready() -> void:
 	if use_generated_map:
@@ -47,6 +51,7 @@ func _ready() -> void:
 		GeneratedTerrainPresenter.build(generated_map, generated_geometry, grid.cell_size)
 		_spawn_generated_team(player_unit_count, TacticalUnit.Faction.PLAYER, player_units_parent, generated_map)
 		_spawn_generated_team(allied_unit_count, TacticalUnit.Faction.ALLY, allied_units_parent, generated_map)
+		_spawn_generated_vip(generated_map)
 		_spawn_generated_team(enemy_unit_count, TacticalUnit.Faction.ENEMY, enemy_units_parent, generated_map)
 		var cover_counts := _count_cover(generated_map)
 		print_rich("[color=cyan][MapGenerator][/color] COVER — seed %d, %dx%d, %d low, %d full, %d building(s)" % [generation_seed, width, depth, cover_counts.x, cover_counts.y, generated_map.buildings.size()])
@@ -54,6 +59,7 @@ func _ready() -> void:
 	else:
 		_spawn_team(player_unit_count, player_spawn_zone, player_units_parent, false)
 		_spawn_team(allied_unit_count, ally_spawn_zone, allied_units_parent, true)
+		_spawn_vip()
 		_spawn_team(enemy_unit_count, enemy_spawn_zone, enemy_units_parent, true)
 		await battle_controller.initialize_battle()
 
@@ -86,6 +92,8 @@ func _create_unit(unit_name: String, faction: TacticalUnit.Faction, parent: Node
 	unit.name = unit_name
 	unit.faction = faction
 	unit.attack_range = test_battle_attack_range
+	if unit.mission_actor:
+		unit.mission_actor.mission_id = StringName(unit_name)
 	parent.add_child(unit)
 	var ai := AIController.new()
 	ai.name = "%sAI" % unit_name
@@ -96,12 +104,40 @@ func _create_unit(unit_name: String, faction: TacticalUnit.Faction, parent: Node
 	return unit
 
 func _register_team_unit(unit: TacticalUnit) -> void:
+	if unit.mission_actor and unit.mission_actor.is_vip():
+		if unit.mission_actor.vip_behavior == MissionActor.VIPBehavior.PLAYER_CONTROLLED:
+			turn_manager.player_units.append(unit)
+		else:
+			turn_manager.allied_units.append(unit)
+		return
 	if unit.faction == TacticalUnit.Faction.ENEMY:
 		turn_manager.enemy_units.append(unit)
 	elif unit.faction == TacticalUnit.Faction.ALLY:
 		turn_manager.allied_units.append(unit)
 	else:
 		turn_manager.player_units.append(unit)
+
+func _configure_vip(unit: TacticalUnit) -> void:
+	unit.mission_actor.kind = MissionActor.Kind.VIP
+	unit.mission_actor.vip_behavior = vip_behavior
+
+func _spawn_vip() -> void:
+	if not include_vip:
+		return
+	var transforms := ally_spawn_zone.get_spawn_transforms(allied_unit_count + 1)
+	var unit := _create_unit("FriendlyVIP", TacticalUnit.Faction.ALLY, allied_units_parent)
+	_configure_vip(unit)
+	unit.global_transform = transforms[allied_unit_count]
+	_register_team_unit(unit)
+
+func _spawn_generated_vip(map_data: MapData) -> void:
+	if not include_vip:
+		return
+	var spawn := map_data.get_spawn_cells(TacticalUnit.Faction.ALLY)[allied_unit_count]
+	var unit := _create_unit("FriendlyVIP", TacticalUnit.Faction.ALLY, allied_units_parent)
+	_configure_vip(unit)
+	unit.global_position = map_data.get_cell(spawn).world_position + Vector3.UP * unit.standing_height
+	_register_team_unit(unit)
 
 func _faction_name(faction: TacticalUnit.Faction) -> String:
 	match faction:

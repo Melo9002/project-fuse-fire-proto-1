@@ -75,11 +75,14 @@ func initialize_battle(prebuilt_map: MapData = null) -> bool:
 		# Let CSG collision bodies enter the physics world before scanning.
 		await get_tree().create_timer(0.05).timeout
 		MapBuilder.scan_obstacles(get_world_3d(), grid_manager, pathfinder)
-	last_map_validation = MapValidator.validate(grid_manager.map_data, pathfinder, {
-		TacticalUnit.Faction.PLAYER: turn_manager.player_units.size(),
-		TacticalUnit.Faction.ALLY: turn_manager.allied_units.size(),
-		TacticalUnit.Faction.ENEMY: turn_manager.enemy_units.size(),
-	})
+	var faction_counts := {
+		TacticalUnit.Faction.PLAYER: 0,
+		TacticalUnit.Faction.ALLY: 0,
+		TacticalUnit.Faction.ENEMY: 0,
+	}
+	for roster_unit in turn_manager.player_units + turn_manager.allied_units + turn_manager.enemy_units:
+		faction_counts[roster_unit.faction] = faction_counts.get(roster_unit.faction, 0) + 1
+	last_map_validation = MapValidator.validate(grid_manager.map_data, pathfinder, faction_counts)
 	if not last_map_validation.is_valid():
 		push_error("Battlefield validation failed:\n%s" % last_map_validation.describe())
 		return false
@@ -218,7 +221,7 @@ func update_unit_movement_zone() -> void:
 			return grid_manager.can_unit_occupy_cell(tactical_unit, cell)
 	)
 
-	path_visualizer.draw_range_zone(current_movement_zone, Color(0.9, 0.8, 0.1, 0.25))
+	path_visualizer.draw_range_zone(current_movement_zone)
 	cover_visualizer.draw_for_cells(current_movement_zone)
 
 func update_attack_range() -> void:

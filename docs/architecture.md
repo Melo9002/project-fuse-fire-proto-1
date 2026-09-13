@@ -43,6 +43,7 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 | `FactionRules` | Relationships between player, ally, enemy, and neutral | Changing who is hostile or friendly |
 | `UnitAction` subclasses | Resource validation and action effects | Changing costs or effects |
 | `UnitStats` | HP, AP, defense, defeat signals | Changing health or resource rules |
+| `MissionActor` | Stable mission identity, actor role, and extraction capability | Defining who objectives refer to |
 | `TacticalUnit` | Path animation, defeat relay, health-display creation | Changing unit movement or presentation |
 | `AIController` | Chooses among legal attacks, movement, and defense | Changing enemy priorities or difficulty |
 | UI and visualizers | Display state and forward input | Changing feedback and presentation |
@@ -58,6 +59,10 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 ## Match setup and spawning
 
 `MatchSetup` collects independent player, allied, and enemy counts and configures a new `BattleLevel`. The level asks each `SpawnZone` for the requested number of marker transforms, instantiates the shared tactical-unit scene, fills the turn rosters, and adds one AI controller per unit. Only then does it tell `BattleController` to scan and start the match.
+
+## Mission actors
+
+Faction answers who a unit considers hostile. `MissionActor` separately records what that unit means to a mission. Its `Kind` distinguishes combatants, VIPs, and rescuable actors, while `extraction_capable` describes a capability that any appropriate actor may have. Every spawned unit receives a stable mission ID derived from its unique battle name. Current Beans default to combatants, so adding this metadata does not change turns, AI, targeting, or elimination victory. The future objective system can refer to mission IDs and roles without encoding mission logic in factions or unit names.
 
 Unit coordinates do not live in spawning code. Handmade `SpawnZone` markers are converted into faction-keyed cells inside `MapData`; a future generator can supply the same data without scene markers. `BattleLevel` still uses authored transforms to instantiate the current Beans, while map validation uses the reusable cell representation.
 
