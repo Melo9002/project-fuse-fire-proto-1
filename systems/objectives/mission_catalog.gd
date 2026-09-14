@@ -8,6 +8,7 @@ const PRESETS := [
 	{"title": "Reach", "description": "Move a player unit into the destination area.", "kind": MissionObjectiveDefinition.Kind.REACH},
 	{"title": "Survive", "description": "Keep the squad alive for three rounds.", "kind": MissionObjectiveDefinition.Kind.SURVIVE},
 	{"title": "Extract", "description": "Bring the mission target to extraction.", "kind": MissionObjectiveDefinition.Kind.EXTRACT},
+	{"title": "Enemy Evacuation", "description": "Defeat every enemy before any can escape.", "kind": MissionObjectiveDefinition.Kind.ENEMY_EVACUATION},
 ]
 
 static func get_preset_names() -> Array[String]:
@@ -35,6 +36,13 @@ static func create_mission(preset_index: int, enemy_count: int, include_vip := f
 			mission.objectives = [squad]
 			if include_vip:
 				mission.objectives.push_front(_objective(&"extract_vips", MissionObjectiveDefinition.Kind.EXTRACT, "Extract VIPs", 1, [&"FriendlyVIP"]))
+		MissionObjectiveDefinition.Kind.ENEMY_EVACUATION:
+			var stop_escape := _objective(&"stop_enemy_evacuation", MissionObjectiveDefinition.Kind.ELIMINATE, "Stop Enemy Evacuation", enemy_count)
+			var enemy_escape := _objective(&"enemy_escape", MissionObjectiveDefinition.Kind.EXTRACT, "Enemies Escaped", enemy_count)
+			enemy_escape.required = false
+			enemy_escape.zone_id = &"enemy_extract"
+			enemy_escape.pursuing_factions = 1 << TacticalUnit.Faction.ENEMY
+			mission.objectives = [stop_escape, enemy_escape]
 		_:
 			var target := enemy_count if preset.kind == MissionObjectiveDefinition.Kind.ELIMINATE else 1
 			var ids: Array[StringName] = []

@@ -19,6 +19,7 @@ var total_vips := 0
 var extracted_vips := 0
 var total_units := 0
 var extracted_units := 0
+var escaped_enemies := 0
 
 func _ready() -> void:
 	if mission: load_mission(mission)
@@ -67,7 +68,8 @@ func get_mission_intent(unit: TacticalUnit) -> MissionIntentData:
 	if should_seek_extraction(unit):
 		var extraction := _first_active_objective(MissionObjectiveDefinition.Kind.EXTRACT, unit.faction)
 		if extraction:
-			return _build_intent(extraction, MissionIntentData.Kind.EXTRACT, &"extract", "Reach the extraction zone and evacuate.")
+			var zone_id := extraction.definition.zone_id if not extraction.definition.zone_id.is_empty() else &"extract"
+			return _build_intent(extraction, MissionIntentData.Kind.EXTRACT, zone_id, "Reach the extraction zone and evacuate.")
 
 	var reach := _first_active_objective(MissionObjectiveDefinition.Kind.REACH, unit.faction)
 	if reach:
@@ -141,13 +143,16 @@ func has_required_objective_failed() -> bool:
 
 func can_extract(unit: TacticalUnit) -> bool:
 	if not mission or not is_instance_valid(unit) or unit.is_moving or not _turn_manager or not _grid_manager: return false
-	if not _turn_manager.player_units.has(unit) and not _turn_manager.allied_units.has(unit): return false
-	if not _grid_manager.map_data.get_objective_zone(&"extract").has(_grid_manager.get_unit_grid(unit)): return false
+	if not _turn_manager.player_units.has(unit) and not _turn_manager.allied_units.has(unit) and not _turn_manager.enemy_units.has(unit): return false
+	var extraction := _first_active_objective(MissionObjectiveDefinition.Kind.EXTRACT, unit.faction)
+	if not extraction or not _has_extract_target(unit): return false
+	var zone_id := extraction.definition.zone_id if not extraction.definition.zone_id.is_empty() else &"extract"
+	if not _grid_manager.map_data.get_objective_zone(zone_id).has(_grid_manager.get_unit_grid(unit)): return false
 	if mission.mission_id == &"prototype_survive" and not get_objective(&"survive").is_completed(): return false
-	return _has_extract_target(unit)
+	return true
 
 func should_seek_extraction(unit: TacticalUnit) -> bool:
-	if not mission or not is_instance_valid(unit) or unit.faction not in [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ALLY]: return false
+	if not mission or not is_instance_valid(unit): return false
 	if not _has_extract_target(unit): return false
 	return mission.mission_id != &"prototype_survive" or get_objective(&"survive").is_completed()
 
@@ -186,8 +191,26 @@ func find_mission_actor(target_ids: Array[StringName]) -> TacticalUnit:
 			return candidate
 	return null
 
+func find_rescue_carrier(faction: TacticalUnit.Faction) -> TacticalUnit:
+	if not mission or mission.mission_id != &"prototype_rescue" or not _turn_manager:
+		return null
+	for candidate in _turn_manager.player_units + _turn_manager.allied_units:
+		if is_instance_valid(candidate) and candidate.faction == faction and candidate.is_carrying_unit():
+			return candidate
+		if is_instance_valid(candidate) and faction in [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ALLY] \
+			and candidate.faction in [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ALLY] and candidate.is_carrying_unit():
+			return candidate
+	return null
+
 func complete_extraction(unit: TacticalUnit) -> bool:
 	if not can_extract(unit): return false
+	if unit.faction == TacticalUnit.Faction.ENEMY:
+		escaped_enemies += 1
+		add_progress(&"enemy_escape")
+		fail_objective(&"stop_enemy_evacuation")
+		mission_report_changed.emit()
+		_battle_controller.extract_unit(unit)
+		return true
 	if unit.is_carrying_unit():
 		_record_vip_extraction(unit.carried_unit)
 		unit.carried_unit.queue_free()
@@ -211,6 +234,8 @@ func end_mission_early() -> bool:
 	return true
 
 func get_result_report() -> String:
+	if mission and mission.mission_id == &"prototype_enemy_evacuation":
+		return "Enemies escaped %d/%d" % [escaped_enemies, get_objective(&"enemy_escape").definition.target_amount]
 	return "VIPs extracted %d/%d | Units extracted %d/%d" % [extracted_vips, total_vips, extracted_units, total_units]
 
 func _initialize_extraction_totals() -> void:
@@ -262,10 +287,13 @@ func _has_extract_target(unit: TacticalUnit) -> bool:
 	if mission.mission_id == &"prototype_rescue" and rescue and rescue.is_completed():
 		return unit.faction in [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ALLY]
 	for state in get_objectives():
-		if not state.is_active() or state.definition.kind != MissionObjectiveDefinition.Kind.EXTRACT: continue
-		if state.definition.target_ids.is_empty() or state.definition.target_ids.has(unit.get_mission_id()): return true
-		if unit.is_carrying_unit() and state.definition.target_ids.has(unit.carried_unit.get_mission_id()): return true
+		if not state.is_active() or state.definition.kind != MissionObjectiveDefinition.Kind.EXTRACT or not state.definition.is_pursued_by(unit.faction): continue
+		if _objective_targets_unit(state, unit): return true
 	return false
+
+func _objective_targets_unit(state: MissionObjectiveState, unit: TacticalUnit) -> bool:
+	if state.definition.target_ids.is_empty() or state.definition.target_ids.has(unit.get_mission_id()): return true
+	return unit.is_carrying_unit() and state.definition.target_ids.has(unit.carried_unit.get_mission_id())
 
 func _record_vip_extraction(unit: TacticalUnit) -> void:
 	extracted_vips += 1

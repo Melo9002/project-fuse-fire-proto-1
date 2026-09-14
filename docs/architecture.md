@@ -49,6 +49,7 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 | `ObjectiveManager` | Creates objective state, applies updates, and emits objective signals | Connecting future mission events and UI to objective progress |
 | `TacticalUnit` | Path animation, defeat relay, health-display creation | Changing unit movement or presentation |
 | `AIController` | Chooses among legal attacks, movement, and defense | Changing enemy priorities or difficulty |
+| `SquadContext` | Shares current-round reservations and intentions within one AI team | Adding small coordination score adjustments |
 | `MissionIntent` | Describes the active mission goal for one automated unit | Adding objective-aware AI planning |
 | UI and visualizers | Display state and forward input | Changing feedback and presentation |
 | `TacticalCamera` | Bounded pan, zoom, and rotation | Changing how the battlefield is viewed |
@@ -76,7 +77,7 @@ Objectives use three layers. `MissionObjectiveDefinition` and `MissionDefinition
 
 `ObjectiveManager` observes the controller's completed movement and defeat events plus the turn manager's round events. It translates them into eliminate, protect, rescue, reach, survive, and extract state changes, then resolves the mission from its required objectives. It never performs combat or movement itself; it requests extraction through `BattleController` and reports the final result through `TurnManager`.
 
-`MissionCatalog` supplies the six prototype presets shown by match setup. The menu creates the chosen Resource and passes it through `BattleLevel.configure()`; the level loads it into `ObjectiveManager` before map construction. The manager logs the active definitions and every later state change.
+`MissionCatalog` supplies the seven prototype presets shown by match setup. The menu creates the chosen Resource and passes it through `BattleLevel.configure()`; the level loads it into `ObjectiveManager` before map construction. The manager logs the active definitions and every later state change.
 
 `MapZoneData` represents deployment, objective, and extraction areas with one ID, kind, cell list, and optional faction owner. `MapData` owns every zone and retains small spawn/objective query methods for its consumers. `MissionZonePlanner` currently chooses valid central cells for authored and generated maps, while `ObjectiveZoneVisualizer` only presents those authoritative coordinates. Rescue adds a neutral, non-turn-taking mission actor on another valid cell. This keeps spatial objective rules independent from meshes, node names, and map source.
 
@@ -89,6 +90,12 @@ Rounds proceed through `PLAYER_TURN → ALLY_TURN → ENEMY_TURN`; an empty alli
 Reach and Extract intents are executable AI goals. `AIController` compares every eligible zone cell by reachable path length, advances once toward the best route, and then retains any remaining AP for combat. An eligible unit already in extraction, including one with zero AP, calls `ObjectiveManager.try_extract()` and therefore the shared `ExtractAction`. Roster removal decides whether another automated player activates or the allied queue advances, avoiding a second phase transition from the AI controller.
 
 Protect and Rescue intents are executable AI goals as well. A protecting combatant returns to a three-cell escort radius when separated, then uses ordinary combat logic while nearby. A rescuer pathfinds to an adjacent cell and calls `ObjectiveManager.try_rescue()` through the zero-AP `RescueAction`; manual movement-triggered pickup uses that same gateway. The rescued actor is removed from grid occupancy and attached to the carrier's existing carried-unit state, which reduces movement speed. Completion exposes the Extract intent, so the carrier uses the normal objective route and `ExtractAction` to evacuate both actors.
+
+During an active Survive objective, `AIController` scores every reachable stopping cell using directional cover against each living hostile, separation from the nearest threat, movement distance, and distance to extraction. It moves to a higher-scoring staging position when one exists and then returns to shared attack or defense choices. `ObjectiveManager` continues to reject extraction before the round requirement is complete. Completion changes the unit's next intent to Extract, so no special evacuation path bypasses `ExtractAction` or the mission roster rules.
+
+Enemy Evacuation combines a required player-owned Eliminate objective with an optional enemy-owned Extract objective. Objective definitions may name their own `MapData` zone, allowing enemy AI to select `enemy_extract` while friendly missions retain `extract`. The enemy exit is presented in orange. `ObjectiveManager` accepts extraction from the appropriate faction, records escaped enemies separately, and fails the required interception objective on the first escape. `TurnManager` removes an active enemy from its queue without skipping the following activation.
+
+`BattleController` owns one `SquadContext` for the friendly alliance and one for enemies. Each context resets when a new round begins and removes an actor's stale intention before its next activation. AI controllers publish committed destinations, targets, and objective handlers after choosing through their existing local policy. Later teammates apply large exact-destination penalties, smaller adjacent-crowding penalties, and gradual target-focus penalties while preserving legal focus fire. Rescue extraction adds one coordination rule: non-carriers support the current carrier until that mobile objective is safe. The decision record carries a short `squad_adjustments` explanation for F3; the context never executes actions or bypasses shared validation.
 
 ## Battlefield validation
 

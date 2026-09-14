@@ -39,7 +39,7 @@ Units start their phase with 2 AP and have 100 HP. Attacks deal 25 damage, or 12
 
 Start with [the architecture guide](docs/architecture.md): ownership, the path from a click to an action, cleanup changes, and known limitations.
 
-The prototype has weighted 3D paths, low-cover vaulting, directional cover, elevation-aware line of sight, ladders, ramps, stairs, platforms, movement previews, selection, AP, shared actions, faction relationships, attacks, defense, autonomous allied and enemy turns, generated maps, mission actors, six playable objective rules, battle results, a tactical camera, and health displays.
+The prototype has weighted 3D paths, low-cover vaulting, directional cover, elevation-aware line of sight, ladders, ramps, stairs, platforms, movement previews, selection, AP, shared actions, faction relationships, attacks, defense, autonomous allied and enemy turns, generated maps, mission actors, seven playable objective rules, battle results, a tactical camera, and health displays.
 
 Match setup supports zero to five green AI allies. Turns proceed from player to allies to enemies. Allies use the same validated movement, attack, and defense actions as every other combatant, are friendly toward players, and are hostile toward enemies. Allies do not appear in the player portrait selector and cannot be selected manually.
 
@@ -127,10 +127,11 @@ The VIP is additional to the selected player combatants and reserves one allied 
 4. **Rescue:** approaching the neutral VIP picks them up; the carrier moves more slowly and must extract while carrying them. Once the VIP is being carried, other friendly units may also evacuate.
 5. **Extract:** every living player or allied unit can evacuate individually through a zero-AP action. Dead units leave the required pool. A VIP is required only when enabled in match setup. All included VIPs must extract; after at least one ordinary unit extracts, the player may end early and leave others behind. Extracting everyone ends automatically.
 6. **Survive:** survive three rounds, then evacuate every remaining unit; early departure is disabled.
+7. **Enemy Evacuation:** defeat every enemy before any reaches the orange evacuation zone. One successful enemy escape causes defeat.
 
 Mission and objective definitions are Godot Resources, so future missions can save required and optional objectives as data. Each battle receives separate runtime state with progress plus active, completed, or failed status. `ObjectiveManager` validates the definitions, observes battle events, and applies the selected mission's victory and defeat rules.
 
-The setup menu offers Eliminate, Protect, Rescue, Reach, Survive, and Extract presets. Starting the battle loads the selected definition and prints an `[Objectives] ACTIVE` message with its kind, requirement, and target. Progress, completion, and failure also print as objective events.
+The setup menu offers Eliminate, Protect, Rescue, Reach, Survive, Extract, and Enemy Evacuation presets. Starting the battle loads the selected definition and prints an `[Objectives] ACTIVE` message with its kind, requirement, and target. Progress, completion, and failure also print as objective events.
 
 The temporary top-right objective readout shows every required and optional objective, its status, and its progress. Any player-controlled unit standing in the green zone receives an **EXTRACT** button beside it, including exhausted units. Extract missions also expose **End Mission** after at least one ordinary unit and every included VIP are safe.
 
@@ -147,3 +148,9 @@ Automated units also receive a mission intent derived from the active objective.
 For Reach and Extract missions, AI-controlled players and allies choose the nearest path-reachable cell in the corresponding `MapData` zone before considering ordinary combat movement. Reaching a destination completes Reach immediately. Units entering extraction use the same zero-AP `ExtractAction` as manually controlled units, leave occupancy and the turn roster, and update the mission report. If mission movement cannot be performed, the unit falls back to its legal attack or defense choices.
 
 For Protect missions, an AI ally outside a three-cell escort radius moves back toward the protected actor before resuming normal combat decisions. For Rescue missions, AI-controlled players and allies approach a neutral rescue target, use the shared zero-AP `RescueAction` from an adjacent cell, accept the existing carrying movement penalty, and then pursue the unlocked extraction objective. Friendly VIP behavior modes remain independent from these combatant mission goals.
+
+For Survive missions, automated players and allies cannot evacuate while the round requirement remains active. They score reachable positions by directional cover, distance from living hostiles, travel cost, and proximity to extraction, reposition when a safer staging cell is available, and retain their remaining AP for combat or defense. Once the survival timer completes, their mission intent changes to Extract and they evacuate through the normal shared action.
+
+Enemy Evacuation assigns the enemy faction an optional Extract objective and a dedicated orange exit across the battlefield. Enemy AI pathfinds to that zone and uses the same zero-AP `ExtractAction`. Defeating every evacuee completes the player's required objective; the first escape fails it. The battle result reports escaped enemies separately from friendly units and VIPs.
+
+Automated teammates share a lightweight per-team `SquadContext` for the current round. It records destination reservations, attack intentions, focus counts, and objective handlers. Exact reserved destinations are rejected, nearby reservations apply a soft crowding penalty, and each ally already targeting an enemy reduces that target's score without forbidding useful focus fire. Rescue carriers become mobile protected actors, so later allies support the carrier until the VIP is safe. F3 lists the objective-handler, destination, focus-fire, and carrier-support adjustments that affected the latest decision.

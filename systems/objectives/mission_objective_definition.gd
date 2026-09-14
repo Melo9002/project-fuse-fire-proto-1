@@ -8,6 +8,7 @@ enum Kind {
 	REACH,
 	SURVIVE,
 	EXTRACT,
+	ENEMY_EVACUATION,
 }
 
 @export var objective_id: StringName
@@ -17,6 +18,7 @@ enum Kind {
 @export var required := true
 @export_range(1, 999, 1) var target_amount := 1
 @export var target_ids: Array[StringName] = []
+@export var zone_id: StringName
 @export_flags("Player", "Enemy", "Ally", "Neutral") var pursuing_factions := (1 << TacticalUnit.Faction.PLAYER) | (1 << TacticalUnit.Faction.ALLY)
 
 func is_pursued_by(faction: TacticalUnit.Faction) -> bool:

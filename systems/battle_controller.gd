@@ -1,6 +1,8 @@
 extends Node3D
 class_name BattleController
 
+const SquadContextData = preload("res://systems/ai/squad_context.gd")
+
 signal move_mode_toggled(is_active: bool)
 signal attack_mode_toggled(is_active: bool)
 signal attack_preview_changed(text: String)
@@ -32,6 +34,7 @@ var current_attack_zone: Array[Vector3i] = []
 var _last_attack_preview := ""
 var debug_enemy_control: bool = false
 var debug_player_ai: bool = false
+var _squad_contexts: Dictionary[int, SquadContext] = {}
 var is_action_in_progress: bool = false:
 	set(value):
 		if is_action_in_progress != value:
@@ -289,7 +292,15 @@ func is_current_phase_manually_controlled() -> bool:
 	return (not debug_player_ai and turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN) \
 		or (debug_enemy_control and turn_manager.current_phase == TurnManager.TurnPhase.ENEMY_TURN)
 
-func record_ai_decision(actor: TacticalUnit, action: String, subject: String, reason: String, alternatives: String, mission_goal := "None") -> void:
+func get_squad_context(unit: TacticalUnit) -> SquadContext:
+	var team_id := 0 if unit.faction in [TacticalUnit.Faction.PLAYER, TacticalUnit.Faction.ALLY] else 1
+	if not _squad_contexts.has(team_id):
+		_squad_contexts[team_id] = SquadContextData.new()
+	var context: SquadContext = _squad_contexts[team_id]
+	context.begin_round(turn_manager.current_round)
+	return context
+
+func record_ai_decision(actor: TacticalUnit, action: String, subject: String, reason: String, alternatives: String, mission_goal := "None", squad_adjustments := "None") -> void:
 	var actor_name := "Unknown"
 	if is_instance_valid(actor):
 		actor_name = String(actor.name)
@@ -300,6 +311,7 @@ func record_ai_decision(actor: TacticalUnit, action: String, subject: String, re
 		"reason": reason,
 		"alternatives": alternatives,
 		"mission_goal": mission_goal,
+		"squad_adjustments": squad_adjustments,
 	})
 
 func try_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:

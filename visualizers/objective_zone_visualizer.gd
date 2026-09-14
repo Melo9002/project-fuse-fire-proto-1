@@ -9,11 +9,14 @@ func show_mission(mission: MissionDefinition) -> void:
 	if mission == null or mission.objectives.is_empty():
 		return
 	var zone_id := StringName()
+	var enemy_owned := false
 	for objective in mission.objectives:
-		if objective.kind == MissionObjectiveDefinition.Kind.EXTRACT: zone_id = &"extract"
+		if objective.kind == MissionObjectiveDefinition.Kind.EXTRACT:
+			zone_id = objective.zone_id if not objective.zone_id.is_empty() else &"extract"
+			enemy_owned = objective.is_pursued_by(TacticalUnit.Faction.ENEMY)
 		elif objective.kind == MissionObjectiveDefinition.Kind.REACH and zone_id.is_empty(): zone_id = &"reach"
 	if zone_id.is_empty(): return
-	var color := Color(0.15, 0.9, 0.4, 0.55) if zone_id == &"extract" else Color(0.65, 0.2, 0.95, 0.55)
+	var color := Color(1.0, 0.45, 0.1, 0.6) if enemy_owned else (Color(0.15, 0.9, 0.4, 0.55) if zone_id == &"extract" else Color(0.65, 0.2, 0.95, 0.55))
 	var mesh_instance := MeshInstance3D.new()
 	mesh_instance.mesh = _build_mesh(grid_manager.map_data.get_objective_zone(zone_id))
 	var material := StandardMaterial3D.new()

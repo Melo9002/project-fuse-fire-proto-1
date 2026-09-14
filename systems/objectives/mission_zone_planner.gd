@@ -4,6 +4,7 @@ extends RefCounted
 static func populate_defaults(map_data: MapData) -> void:
 	map_data.set_objective_zone(&"reach", _nearest_open_cells(map_data, Vector2i(floori(map_data.map_size.x / 2.0), floori(map_data.map_size.y / 2.0)), 4))
 	map_data.set_objective_zone(&"extract", _nearest_open_cells(map_data, Vector2i(floori(map_data.map_size.x / 2.0), maxi(2, floori(map_data.map_size.y / 4.0))), 4))
+	map_data.set_objective_zone(&"enemy_extract", _nearest_open_cells(map_data, Vector2i(2, floori(map_data.map_size.y / 2.0)), 4))
 
 static func find_rescue_cell(map_data: MapData) -> Vector3i:
 	var cells := _nearest_open_cells(map_data, Vector2i(floori(map_data.map_size.x / 2.0), floori(map_data.map_size.y / 2.0)), 1)

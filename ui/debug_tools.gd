@@ -193,11 +193,12 @@ func _on_ai_decision_recorded(record: Dictionary) -> void:
 	_latest_ai_decision = record
 	if not _ai_decision_label:
 		return
-	_ai_decision_label.text = "AI DECISION\n%s → %s  %s\nMission goal: %s\nReason: %s\nAlternatives: %s" % [
+	_ai_decision_label.text = "AI DECISION\n%s → %s  %s\nMission goal: %s\nSquad: %s\nReason: %s\nAlternatives: %s" % [
 		record.get("actor", "Unknown"),
 		record.get("action", "Unknown"),
 		record.get("subject", ""),
 		record.get("mission_goal", "None"),
+		record.get("squad_adjustments", "None"),
 		record.get("reason", ""),
 		record.get("alternatives", ""),
 	]

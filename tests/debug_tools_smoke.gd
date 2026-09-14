@@ -70,6 +70,7 @@ func _check_automatic_battle() -> void:
 	check(not debug_tools._latest_ai_decision.is_empty(), "Automatic actions publish an AI decision explanation")
 	check(debug_tools._latest_ai_decision.has("action") and debug_tools._latest_ai_decision.has("reason"), "AI explanations contain a choice and reason")
 	check(debug_tools._latest_ai_decision.has("mission_goal"), "AI explanations keep the mission goal beside the combat choice")
+	check(debug_tools._latest_ai_decision.has("squad_adjustments"), "AI explanations expose squad-awareness adjustments")
 
 	level.queue_free()
 	await process_frame

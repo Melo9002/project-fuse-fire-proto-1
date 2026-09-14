@@ -74,7 +74,7 @@ func get_zones_by_kind(kind: MapZoneData.Kind) -> Array[MapZoneData]:
 	return result
 
 func set_objective_zone(zone_id: StringName, zone_cells: Array[Vector3i]) -> void:
-	var kind := MapZoneData.Kind.EXTRACTION if zone_id == &"extract" else MapZoneData.Kind.OBJECTIVE
+	var kind := MapZoneData.Kind.EXTRACTION if String(zone_id).ends_with("extract") else MapZoneData.Kind.OBJECTIVE
 	set_zone(MapZoneData.new(zone_id, kind, zone_cells))
 
 func get_objective_zone(zone_id: StringName) -> Array[Vector3i]:

@@ -15,6 +15,7 @@ var _stats: UnitStats
 var _active_camera: Camera3D
 var _objective_manager: ObjectiveManager
 var _turn_manager: TurnManager
+var _battle_controller: BattleController
 
 ## Project the unit's world position into the UI layer each frame.
 func setup(unit: Node3D, stats: UnitStats, faction: int = 0) -> void:
@@ -22,6 +23,8 @@ func setup(unit: Node3D, stats: UnitStats, faction: int = 0) -> void:
 	_stats = stats
 	_objective_manager = get_tree().get_first_node_in_group("objective_manager") as ObjectiveManager
 	_turn_manager = get_tree().get_first_node_in_group("turn_manager") as TurnManager
+	if _turn_manager:
+		_battle_controller = _turn_manager.get_parent().get_node_or_null("BattleController") as BattleController
 	if extract_button and not extract_button.pressed.is_connected(_on_extract_pressed):
 		extract_button.pressed.connect(_on_extract_pressed)
 	if _turn_manager and not _turn_manager.active_unit_changed.is_connected(_on_active_unit_changed):
@@ -108,8 +111,12 @@ func _on_extract_pressed() -> void:
 
 func _refresh_extract_button() -> void:
 	if extract_button:
+		var player_controlled := _turn_manager != null and _turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN and _turn_manager.player_units.has(_target_unit)
+		var manually_controlled_enemy := _turn_manager != null and _battle_controller != null \
+			and _turn_manager.current_phase == TurnManager.TurnPhase.ENEMY_TURN \
+			and _turn_manager.active_unit == _target_unit and _battle_controller.debug_enemy_control
 		extract_button.visible = _objective_manager != null and is_instance_valid(_target_unit) and _target_unit is TacticalUnit \
-			and _turn_manager != null and _turn_manager.player_units.has(_target_unit) \
+			and (player_controlled or manually_controlled_enemy) \
 			and _objective_manager.can_extract(_target_unit as TacticalUnit)
 
 func _refresh_carry_label() -> void:

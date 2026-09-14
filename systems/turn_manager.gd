@@ -96,6 +96,7 @@ func remove_unit(unit: TacticalUnit) -> void:
 func remove_extracted_unit(unit: TacticalUnit) -> void:
 	var was_active := active_unit == unit
 	var was_ally := allied_units.has(unit)
+	var was_enemy := enemy_units.has(unit)
 	player_units.erase(unit)
 	allied_units.erase(unit)
 	enemy_units.erase(unit)
@@ -109,6 +110,8 @@ func remove_extracted_unit(unit: TacticalUnit) -> void:
 				return
 		player_actions_exhausted.emit()
 	elif current_phase == TurnPhase.ALLY_TURN and was_ally:
+		active_unit_index -= 1
+	elif current_phase == TurnPhase.ENEMY_TURN and was_enemy:
 		active_unit_index -= 1
 
 func is_any_unit_moving() -> bool:
