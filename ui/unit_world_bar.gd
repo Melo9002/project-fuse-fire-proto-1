@@ -111,11 +111,14 @@ func _on_extract_pressed() -> void:
 
 func _refresh_extract_button() -> void:
 	if extract_button:
-		var player_controlled := _turn_manager != null and _turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN and _turn_manager.player_units.has(_target_unit)
+		extract_button.visible = false
+		if not is_instance_valid(_target_unit) or not _target_unit is TacticalUnit:
+			return
+		var player_controlled := _turn_manager != null and _turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN and _turn_manager.player_units.has(_target_unit as TacticalUnit)
 		var manually_controlled_enemy := _turn_manager != null and _battle_controller != null \
 			and _turn_manager.current_phase == TurnManager.TurnPhase.ENEMY_TURN \
 			and _turn_manager.active_unit == _target_unit and _battle_controller.debug_enemy_control
-		extract_button.visible = _objective_manager != null and is_instance_valid(_target_unit) and _target_unit is TacticalUnit \
+		extract_button.visible = _objective_manager != null \
 			and (player_controlled or manually_controlled_enemy) \
 			and _objective_manager.can_extract(_target_unit as TacticalUnit)
 

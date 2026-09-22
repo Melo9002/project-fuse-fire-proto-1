@@ -39,7 +39,7 @@ func draw_trajectory(origin: Vector3, destination: Vector3, evaluation: CombatRu
 	mesh_instance.position = (origin + destination) * 0.5
 	mesh_instance.quaternion = Quaternion(Vector3.UP, direction.normalized())
 	mesh_instance.material_override = _make_material(_get_color(evaluation))
-	_draw_blocker(origin, destination, evaluation)
+	_draw_blocker(evaluation)
 
 func clear() -> void:
 	if mesh_instance:
@@ -61,7 +61,7 @@ func _get_color(evaluation: CombatRules.AttackEvaluation) -> Color:
 		return Color(1.0, 0.72, 0.1, 0.65)
 	return Color(0.2, 1.0, 0.45, 0.65)
 
-func _draw_blocker(origin: Vector3, destination: Vector3, evaluation: CombatRules.AttackEvaluation) -> void:
+func _draw_blocker(evaluation: CombatRules.AttackEvaluation) -> void:
 	blocker_marker.mesh = null
 	last_blocking_cell = null
 	if evaluation.reason != "Blocked" or not grid_manager:

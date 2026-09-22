@@ -91,7 +91,7 @@ static func _evaluate_target_visibility(attacker: TacticalUnit, target: Tactical
 		base + Vector3.UP * target.standing_height * 0.5,
 	]
 	var visible: Array[Vector3] = []
-	var first_blocker: MapCellData
+	var first_blocker: MapCellData = null
 	var ignored_cells: Array[Vector3i] = [grid.get_unit_grid(attacker), grid.get_unit_grid(target)]
 	for sample in samples:
 		var blocker := _get_geometry_between(origin, sample, grid, false, ignored_cells)
