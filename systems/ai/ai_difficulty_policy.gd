@@ -12,6 +12,15 @@ var crowding_penalty_weight := 1.0
 var survival_cover_weight := 1.0
 var survival_separation_weight := 1.0
 var safe_advance_exposure_tolerance := 0.01
+var position_cover_weight := 1.0
+var position_exposure_weight := 1.0
+var position_firing_weight := 1.0
+var position_danger_weight := 1.0
+var target_vip_weight := 1.0
+var target_threat_weight := 1.0
+var target_mission_weight := 1.0
+var lapse_chance := 0.08
+var lapse_score_margin := 12.0
 
 static func get_label(selected_tier: Tier) -> String:
 	match selected_tier:
@@ -26,6 +35,8 @@ static func create(selected_tier: Tier) -> AIDifficultyPolicy:
 	policy.tier = selected_tier
 	match selected_tier:
 		Tier.EASY:
+			policy.lapse_chance = 0.22
+			policy.lapse_score_margin = 15.0
 			policy.wounded_target_weight = 0.35
 			policy.finishing_bonus_weight = 0.25
 			policy.focus_penalty_weight = 0.25
@@ -34,14 +45,40 @@ static func create(selected_tier: Tier) -> AIDifficultyPolicy:
 			policy.survival_cover_weight = 0.6
 			policy.survival_separation_weight = 0.6
 			policy.safe_advance_exposure_tolerance = 0.4
+			policy.position_cover_weight = 0.6
+			policy.position_exposure_weight = 0.55
+			policy.position_firing_weight = 0.7
+			policy.position_danger_weight = 0.6
+			policy.target_vip_weight = 0.6
+			policy.target_threat_weight = 0.55
+			policy.target_mission_weight = 0.6
 		Tier.HARD:
+			policy.lapse_chance = 0.0
 			policy.wounded_target_weight = 1.3
 			policy.finishing_bonus_weight = 1.5
 			policy.focus_penalty_weight = 0.7
 			policy.crowding_penalty_weight = 1.2
 			policy.survival_cover_weight = 1.35
 			policy.survival_separation_weight = 1.2
+			policy.position_cover_weight = 1.3
+			policy.position_exposure_weight = 1.35
+			policy.position_firing_weight = 1.25
+			policy.position_danger_weight = 1.4
+			policy.target_vip_weight = 1.2
+			policy.target_threat_weight = 1.35
+			policy.target_mission_weight = 1.4
 	return policy
+
+func choose_near_best_index(scores: Array[float], rng: RandomNumberGenerator) -> int:
+	if tier == Tier.HARD or scores.size() < 2:
+		return 0
+	var eligible: Array[int] = []
+	for index in range(1, scores.size()):
+		if scores[0] - scores[index] <= lapse_score_margin:
+			eligible.append(index)
+	if eligible.is_empty() or rng.randf() >= lapse_chance:
+		return 0
+	return eligible[rng.randi_range(0, eligible.size() - 1)]
 
 func score_target(missing_hp: int, current_hp: int, focus_adjustment: float) -> float:
 	var finisher := 20.0 if current_hp <= 25 else 0.0

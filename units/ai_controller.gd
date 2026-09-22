@@ -13,7 +13,10 @@ var _objective_manager: ObjectiveManager
 var _squad_context: SquadContext
 var _squad_notes: Array[String] = []
 var _pending_target_note := ""
+var _pending_target_scores := "None"
 var _policy: AIDifficultyPolicy
+var _decision_rng := RandomNumberGenerator.new()
+var _last_position_scores := "None"
 var current_mission_intent := MissionIntentData.new()
 
 enum MissionStepResult {
@@ -32,6 +35,7 @@ func _ready() -> void:
 	unit.defeated.connect(_on_unit_defeated)
 	_objective_manager = get_tree().get_first_node_in_group("objective_manager") as ObjectiveManager
 	_policy = AIDifficultyPolicy.create(battle_controller.ai_difficulty)
+	_decision_rng.seed = battle_controller.ai_decision_seed * 1000003 + String(unit.name).hash()
 
 func _validate_dependencies() -> bool:
 	var valid := true
@@ -56,6 +60,7 @@ func _on_active_unit_changed(new_active_unit: TacticalUnit) -> void:
 	_squad_context = battle_controller.get_squad_context(unit)
 	_squad_context.begin_unit(unit)
 	_squad_notes.clear()
+	_last_position_scores = "None"
 	if current_mission_intent.is_actionable():
 		var existing_handlers := _squad_context.reserve_objective(unit, current_mission_intent.objective_id)
 		_squad_notes.append("Objective handler: first" if existing_handlers == 0 else "Objective already handled by %d ally: spread/support" % existing_handlers)
@@ -275,23 +280,9 @@ func _move_toward_range(target: TacticalUnit, desired_distance: int, safe_only :
 	# Leave the requested path distance between the mover and an occupied target.
 	for step in mini(desired_distance, path.size() - 1):
 		path.remove_at(path.size() - 1)
-	var reachable = battle_controller.pathfinder.get_reachable_cells(start_cell, unit.stats.speed)
-	var best_candidate := Vector3i(-1, -1, -1)
-	var best_adjustment := 0.0
-	var best_score := -INF
-	for destination_index in range(1, path.size()):
-		var candidate = battle_controller.world_to_grid(path[destination_index])
-		var squad_adjustment := _squad_context.destination_adjustment(unit, candidate) if _squad_context else 0.0
-		var score := _policy.score_path_progress(destination_index, squad_adjustment)
-		if squad_adjustment > -1000.0 and score > best_score and reachable.has(candidate) and battle_controller.grid_manager.can_unit_occupy_cell(unit, candidate) and (not safe_only or _is_safe_advance_cell(candidate)):
-			best_candidate = candidate
-			best_adjustment = squad_adjustment
-			best_score = score
-	if best_candidate.x >= 0 and await battle_controller.try_move(unit, best_candidate):
-		_last_move_destination = best_candidate
-		_reserve_destination(best_candidate, best_adjustment)
-		return true
-	return false
+	if path.size() <= 1:
+		return false
+	return await _move_along_goal_path(path, start_cell, target_cell, safe_only)
 
 func _grid_distance_to(target: TacticalUnit) -> int:
 	var from := battle_controller.grid_manager.get_unit_grid(unit)
@@ -302,20 +293,58 @@ func _move_toward_cell(target_cell: Vector3i, safe_only := false) -> bool:
 	var start_cell := battle_controller.grid_manager.get_unit_grid(unit)
 	var path := battle_controller.pathfinder.calculate_3d_path(start_cell, target_cell)
 	if path.size() <= 1: return false
+	return await _move_along_goal_path(path, start_cell, target_cell, safe_only)
+
+func _move_along_goal_path(path: PackedVector3Array, start_cell: Vector3i, goal_cell: Vector3i, safe_only: bool) -> bool:
 	var reachable := battle_controller.pathfinder.get_reachable_cells(start_cell, unit.stats.speed)
 	var best_candidate := Vector3i(-1, -1, -1)
 	var best_adjustment := 0.0
 	var best_score := -INF
-	for index in range(1, path.size()):
-		var candidate := battle_controller.world_to_grid(path[index])
-		var squad_adjustment := _squad_context.destination_adjustment(unit, candidate) if _squad_context else 0.0
-		var score := _policy.score_path_progress(index, squad_adjustment)
-		if squad_adjustment > -1000.0 and score > best_score and reachable.has(candidate) and battle_controller.grid_manager.can_unit_occupy_cell(unit, candidate) and (not safe_only or _is_safe_advance_cell(candidate)):
+	var best_summary := "None"
+	var options: Array[Dictionary] = []
+	var hostiles := _get_hostile_units()
+	var objective_route := current_mission_intent.kind in [MissionIntentData.Kind.REACH, MissionIntentData.Kind.EXTRACT, MissionIntentData.Kind.RESCUE]
+	for candidate in reachable:
+		if not battle_controller.grid_manager.can_unit_occupy_cell(unit, candidate) or (safe_only and not _is_safe_advance_cell(candidate)):
+			continue
+		var route_index := -1
+		var route_distance := INF
+		for index in range(1, path.size()):
+			var route_cell := battle_controller.world_to_grid(path[index])
+			var distance := candidate.distance_to(route_cell)
+			if distance <= 2.0 and (distance < route_distance or (is_equal_approx(distance, route_distance) and index > route_index)):
+				route_distance = distance
+				route_index = index
+		if route_index < 0:
+			continue
+		var scored := AIPositionScorer.evaluate(unit, candidate, start_cell, goal_cell, mini(route_index, unit.stats.speed), objective_route, hostiles, battle_controller.grid_manager, _policy, _squad_context)
+		var score: float = scored.total
+		if score > -INF:
+			options.append({"cell": candidate, "score": score, "scored": scored})
+		if score > best_score:
 			best_candidate = candidate
-			best_adjustment = squad_adjustment
+			best_adjustment = _squad_context.destination_adjustment(unit, candidate) if _squad_context else 0.0
 			best_score = score
+			best_summary = scored.summary
+	if options.size() > 1 and best_candidate != goal_cell:
+		options.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.score > b.score)
+		var scores: Array[float] = [options[0].score]
+		var eligible: Array[Dictionary] = [options[0]]
+		var top: Dictionary = options[0].scored
+		for option in options.slice(1):
+			var detail: Dictionary = option.scored
+			if detail.progress >= top.progress - 8.0 and detail.exposure >= top.exposure - 4.0 and detail.danger >= top.danger - 3.0:
+				eligible.append(option)
+				scores.append(option.score)
+		var choice := _policy.choose_near_best_index(scores, _decision_rng)
+		if choice > 0:
+			var selected := eligible[choice]
+			best_candidate = selected.cell
+			best_adjustment = _squad_context.destination_adjustment(unit, best_candidate) if _squad_context else 0.0
+			best_summary = "%s; %s lapse: near-best tile %.1f vs %.1f" % [selected.scored.summary, AIDifficultyPolicy.get_label(_policy.tier), selected.score, scores[0]]
 	if best_candidate.x >= 0 and await battle_controller.try_move(unit, best_candidate):
 		_last_move_destination = best_candidate
+		_last_position_scores = best_summary
 		_reserve_destination(best_candidate, best_adjustment)
 		return true
 	return false
@@ -354,20 +383,14 @@ func _best_survival_position() -> Vector3i:
 
 func _survival_position_score(candidate: Vector3i, start: Vector3i) -> float:
 	var grid := battle_controller.grid_manager
-	var score := -0.15 * start.distance_to(candidate)
-	if _squad_context:
-		score += _squad_context.destination_adjustment(unit, candidate) * _policy.crowding_penalty_weight
+	var scored := AIPositionScorer.evaluate(unit, candidate, start, Vector3i(-1, -1, -1), 0, false, _get_hostile_units(), grid, _policy, _squad_context)
+	var score: float = scored.total - 0.15 * start.distance_to(candidate)
 	var nearest_hostile := INF
 	for hostile in _get_hostile_units():
 		if not is_instance_valid(hostile):
 			continue
 		var hostile_cell := grid.get_unit_grid(hostile)
 		nearest_hostile = minf(nearest_hostile, candidate.distance_to(hostile_cell))
-		match CombatRules.get_directional_cover(hostile_cell, candidate, grid):
-			MapCellData.CoverType.LOW:
-				score += 24.0 * _policy.survival_cover_weight
-			MapCellData.CoverType.FULL:
-				score += 36.0 * _policy.survival_cover_weight
 	if nearest_hostile < INF:
 		score += minf(nearest_hostile, 12.0) * 1.5 * _policy.survival_separation_weight
 	var extraction := grid.map_data.get_objective_zone(&"extract")
@@ -381,17 +404,37 @@ func _survival_position_score(candidate: Vector3i, start: Vector3i) -> float:
 func _find_attack_target() -> TacticalUnit:
 	var best_target: TacticalUnit
 	var best_score := -INF
+	var options: Array[Dictionary] = []
 	_pending_target_note = ""
+	_pending_target_scores = "None"
+	var friendlies := _get_friendly_units()
 	for candidate in _get_hostile_units():
 		if not is_instance_valid(candidate) or not candidate.stats or candidate.stats.is_defeated:
 			continue
 		if battle_controller.evaluate_attack(unit, candidate).is_legal:
-			var focus_adjustment := _squad_context.target_adjustment(unit, candidate) if _squad_context else 0.0
-			var score := _policy.score_target(candidate.stats.max_hp - candidate.stats.current_hp, candidate.stats.current_hp, focus_adjustment)
+			var scored := AITargetScorer.evaluate(unit, candidate, friendlies, current_mission_intent, _objective_manager, battle_controller.grid_manager, _policy, _squad_context)
+			var score: float = scored.total
+			options.append({"target": candidate, "score": score, "scored": scored})
 			if score > best_score:
 				best_target = candidate
 				best_score = score
-				_pending_target_note = "Target focus: %+.0f (%d allies engaged)" % [focus_adjustment, int(-focus_adjustment / 15.0)]
+				_pending_target_note = "Target focus: %+.0f (%d allies engaged)" % [scored.focus, scored.focus_count]
+				_pending_target_scores = scored.summary
+	if options.size() > 1:
+		options.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.score > b.score)
+		var scores: Array[float] = [options[0].score]
+		var eligible: Array[Dictionary] = [options[0]]
+		var top: Dictionary = options[0].scored
+		for option in options.slice(1):
+			if option.scored.mission >= top.mission - 8.0:
+				eligible.append(option)
+				scores.append(option.score)
+		var choice := _policy.choose_near_best_index(scores, _decision_rng)
+		if choice > 0:
+			var selected := eligible[choice]
+			best_target = selected.target
+			_pending_target_note = "Target focus: %+.0f (%d allies engaged)" % [selected.scored.focus, selected.scored.focus_count]
+			_pending_target_scores = "%s; %s lapse: near-best target %.1f vs %.1f" % [selected.scored.summary, AIDifficultyPolicy.get_label(_policy.tier), selected.score, scores[0]]
 	return best_target
 
 func _reserve_destination(cell: Vector3i, adjustment: float) -> void:
@@ -405,7 +448,14 @@ func _reserve_destination(cell: Vector3i, adjustment: float) -> void:
 
 func _record_ai_decision(action: String, subject: String, reason: String, alternatives: String) -> void:
 	var notes := "None" if _squad_notes.is_empty() else "; ".join(_squad_notes)
-	battle_controller.record_ai_decision(unit, action, subject, reason, alternatives, current_mission_intent.get_debug_label(), notes)
+	battle_controller.record_ai_decision(unit, action, subject, reason, alternatives, current_mission_intent.get_debug_label(), notes, _last_position_scores, _pending_target_scores if action == "Attack" else "None")
+
+func _get_friendly_units() -> Array[TacticalUnit]:
+	var friendlies: Array[TacticalUnit] = []
+	for candidate in turn_manager.player_units + turn_manager.allied_units + turn_manager.enemy_units:
+		if is_instance_valid(candidate) and candidate.faction != TacticalUnit.Faction.NEUTRAL and not FactionRules.are_hostile(unit.faction, candidate.faction):
+			friendlies.append(candidate)
+	return friendlies
 
 func _find_nearest_hostile() -> TacticalUnit:
 	var nearest: TacticalUnit

@@ -38,6 +38,7 @@ func configure(player_count: int, enemy_count: int, generate_map: bool = false, 
 	mission_definition = selected_mission
 	ai_difficulty = selected_difficulty
 	battle_controller.ai_difficulty = selected_difficulty
+	battle_controller.ai_decision_seed = map_seed
 
 func _ready() -> void:
 	print("[AI Difficulty] %s" % AIDifficultyPolicy.get_label(ai_difficulty))

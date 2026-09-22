@@ -35,6 +35,7 @@ var _last_attack_preview := ""
 var debug_enemy_control: bool = false
 var debug_player_ai: bool = false
 var ai_difficulty: AIDifficultyPolicy.Tier = AIDifficultyPolicy.Tier.NORMAL
+var ai_decision_seed: int = 1
 var _squad_contexts: Dictionary[int, SquadContext] = {}
 var is_action_in_progress: bool = false:
 	set(value):
@@ -301,7 +302,7 @@ func get_squad_context(unit: TacticalUnit) -> SquadContext:
 	context.begin_round(turn_manager.current_round)
 	return context
 
-func record_ai_decision(actor: TacticalUnit, action: String, subject: String, reason: String, alternatives: String, mission_goal := "None", squad_adjustments := "None") -> void:
+func record_ai_decision(actor: TacticalUnit, action: String, subject: String, reason: String, alternatives: String, mission_goal := "None", squad_adjustments := "None", position_scores := "None", target_scores := "None") -> void:
 	var actor_name := "Unknown"
 	if is_instance_valid(actor):
 		actor_name = String(actor.name)
@@ -313,6 +314,8 @@ func record_ai_decision(actor: TacticalUnit, action: String, subject: String, re
 		"alternatives": alternatives,
 		"mission_goal": mission_goal,
 		"squad_adjustments": squad_adjustments,
+		"position_scores": position_scores,
+		"target_scores": target_scores,
 		"difficulty": AIDifficultyPolicy.get_label(ai_difficulty),
 	})
 
