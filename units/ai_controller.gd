@@ -106,8 +106,11 @@ func _execute_turn() -> void:
 			has_moved = true
 			_record_ai_decision("Move", str(_last_move_destination), "No legal shot; approached the nearest hostile unit.", "Attack, Defend")
 			continue
+		if has_moved and await _try_safe_second_advance(movement_target):
+			_record_ai_decision("Move", str(_last_move_destination), "No legal shot; spent remaining AP advancing to a safe tile.", "Attack, Defend")
+			continue
 		if battle_controller.try_defend(unit):
-			var reason := "No legal shot after moving." if has_moved else "No legal shot or reachable approach."
+			var reason := "No legal shot or safe second advance." if has_moved else "No legal shot or reachable approach."
 			_record_ai_decision("Defend", unit.name, reason, "Attack, Move")
 		break
 
@@ -214,10 +217,53 @@ func _execute_vip_turn() -> void:
 	if _should_control_unit():
 		turn_manager.end_current_turn()
 
-func _move_toward(target: TacticalUnit) -> bool:
-	return await _move_toward_range(target, 1)
+func _try_safe_second_advance(movement_target: TacticalUnit) -> bool:
+	if unit.stats.current_ap < 1:
+		return false
+	match current_mission_intent.kind:
+		MissionIntentData.Kind.REACH, MissionIntentData.Kind.EXTRACT:
+			if current_mission_intent.kind == MissionIntentData.Kind.EXTRACT:
+				var carrier := _objective_manager.find_rescue_carrier(unit.faction)
+				if carrier and carrier != unit:
+					return _grid_distance_to(carrier) > 2 and await _move_toward_range(carrier, 2, true)
+			var destination := _nearest_reachable_zone_cell(current_mission_intent.zone_id)
+			return destination.x >= 0 and await _move_toward_cell(destination, true)
+		MissionIntentData.Kind.RESCUE:
+			var rescue_target := _objective_manager.find_mission_actor(current_mission_intent.target_ids)
+			return rescue_target != null and await _move_toward(rescue_target, true)
+		MissionIntentData.Kind.ELIMINATE, MissionIntentData.Kind.NONE:
+			return movement_target != null and await _move_toward(movement_target, true)
+	return false
 
-func _move_toward_range(target: TacticalUnit, desired_distance: int) -> bool:
+func _is_safe_advance_cell(candidate: Vector3i) -> bool:
+	var current := battle_controller.grid_manager.get_unit_grid(unit)
+	return _advance_exposure(candidate) <= _advance_exposure(current) + 0.01
+
+func _advance_exposure(candidate: Vector3i) -> float:
+	var grid := battle_controller.grid_manager
+	var destination := grid.grid_to_world(candidate)
+	var exposure := 0.0
+	for hostile in _get_hostile_units():
+		if not is_instance_valid(hostile) or not hostile.stats or hostile.stats.is_defeated:
+			continue
+		var hostile_cell := grid.get_unit_grid(hostile)
+		var distance := absi(hostile_cell.x - candidate.x) + absi(hostile_cell.y - candidate.y) + absi(hostile_cell.z - candidate.z)
+		if distance <= hostile.attack_range and CombatRules.has_line_of_sight_to_position(hostile, destination, grid, unit.get_world_3d()):
+			match CombatRules.get_directional_cover(hostile_cell, candidate, grid):
+				MapCellData.CoverType.FULL:
+					exposure += 0.35
+				MapCellData.CoverType.LOW:
+					exposure += 0.65
+				_:
+					exposure += 1.0
+			if distance <= 2:
+				exposure += 0.5
+	return exposure
+
+func _move_toward(target: TacticalUnit, safe_only := false) -> bool:
+	return await _move_toward_range(target, 1, safe_only)
+
+func _move_toward_range(target: TacticalUnit, desired_distance: int, safe_only := false) -> bool:
 	var start_cell = battle_controller.grid_manager.get_unit_grid(unit)
 	var target_cell = battle_controller.grid_manager.get_unit_grid(target)
 	var path = battle_controller.pathfinder.calculate_3d_path(start_cell, target_cell)
@@ -235,7 +281,7 @@ func _move_toward_range(target: TacticalUnit, desired_distance: int) -> bool:
 		var candidate = battle_controller.world_to_grid(path[destination_index])
 		var squad_adjustment := _squad_context.destination_adjustment(unit, candidate) if _squad_context else 0.0
 		var score := float(destination_index) + squad_adjustment
-		if squad_adjustment > -1000.0 and score > best_score and reachable.has(candidate) and battle_controller.grid_manager.can_unit_occupy_cell(unit, candidate):
+		if squad_adjustment > -1000.0 and score > best_score and reachable.has(candidate) and battle_controller.grid_manager.can_unit_occupy_cell(unit, candidate) and (not safe_only or _is_safe_advance_cell(candidate)):
 			best_candidate = candidate
 			best_adjustment = squad_adjustment
 			best_score = score
@@ -250,7 +296,7 @@ func _grid_distance_to(target: TacticalUnit) -> int:
 	var to := battle_controller.grid_manager.get_unit_grid(target)
 	return absi(from.x - to.x) + absi(from.y - to.y) + absi(from.z - to.z)
 
-func _move_toward_cell(target_cell: Vector3i) -> bool:
+func _move_toward_cell(target_cell: Vector3i, safe_only := false) -> bool:
 	var start_cell := battle_controller.grid_manager.get_unit_grid(unit)
 	var path := battle_controller.pathfinder.calculate_3d_path(start_cell, target_cell)
 	if path.size() <= 1: return false
@@ -262,7 +308,7 @@ func _move_toward_cell(target_cell: Vector3i) -> bool:
 		var candidate := battle_controller.world_to_grid(path[index])
 		var squad_adjustment := _squad_context.destination_adjustment(unit, candidate) if _squad_context else 0.0
 		var score := float(index) + squad_adjustment
-		if squad_adjustment > -1000.0 and score > best_score and reachable.has(candidate) and battle_controller.grid_manager.can_unit_occupy_cell(unit, candidate):
+		if squad_adjustment > -1000.0 and score > best_score and reachable.has(candidate) and battle_controller.grid_manager.can_unit_occupy_cell(unit, candidate) and (not safe_only or _is_safe_advance_cell(candidate)):
 			best_candidate = candidate
 			best_adjustment = squad_adjustment
 			best_score = score
