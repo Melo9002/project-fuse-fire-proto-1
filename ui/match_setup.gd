@@ -13,6 +13,7 @@ extends Control
 var vip_toggle: CheckButton
 var vip_behavior: OptionButton
 var objective_option: OptionButton
+var difficulty_option: OptionButton
 var deployment_summary: Label
 var _seed_rng := RandomNumberGenerator.new()
 
@@ -66,8 +67,11 @@ func _build_vip_setup() -> void:
 	$CenterContainer/Panel/Margin/VBox.move_child(box, 3)
 
 func _build_objective_setup() -> void:
-	var box := VBoxContainer.new()
+	var box := HBoxContainer.new()
 	box.name = "ObjectiveSetup"
+	box.add_theme_constant_override("separation", 16)
+	var objective_box := VBoxContainer.new()
+	objective_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var label := Label.new()
 	label.text = "MISSION OBJECTIVE"
 	objective_option = OptionButton.new()
@@ -75,8 +79,21 @@ func _build_objective_setup() -> void:
 	for objective_name in MissionCatalog.get_preset_names():
 		objective_option.add_item(objective_name)
 	objective_option.item_selected.connect(_on_objective_selected)
-	box.add_child(label)
-	box.add_child(objective_option)
+	objective_box.add_child(label)
+	objective_box.add_child(objective_option)
+	box.add_child(objective_box)
+	var difficulty_box := VBoxContainer.new()
+	difficulty_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var difficulty_label := Label.new()
+	difficulty_label.text = "AI DIFFICULTY"
+	difficulty_option = OptionButton.new()
+	difficulty_option.tooltip_text = "Changes AI decisions for both teams; combat rules and AP stay the same."
+	for tier in AIDifficultyPolicy.Tier.size():
+		difficulty_option.add_item(AIDifficultyPolicy.get_label(tier))
+	difficulty_option.select(AIDifficultyPolicy.Tier.NORMAL)
+	difficulty_box.add_child(difficulty_label)
+	difficulty_box.add_child(difficulty_option)
+	box.add_child(difficulty_box)
 	$CenterContainer/Panel/Margin/VBox.add_child(box)
 	$CenterContainer/Panel/Margin/VBox.move_child(box, 4)
 
@@ -138,7 +155,8 @@ func _start_battle() -> void:
 		FlatMapGenerator.MAP_SIZES[map_size_option.selected],
 		vip_toggle.button_pressed,
 		vip_behavior.selected,
-		MissionCatalog.create_mission(objective_option.selected, int(enemy_count.value), vip_toggle.button_pressed)
+		MissionCatalog.create_mission(objective_option.selected, int(enemy_count.value), vip_toggle.button_pressed),
+		difficulty_option.selected
 	)
 	get_tree().root.add_child(battle)
 	get_tree().current_scene = battle

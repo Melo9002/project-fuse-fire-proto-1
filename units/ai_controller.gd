@@ -13,6 +13,7 @@ var _objective_manager: ObjectiveManager
 var _squad_context: SquadContext
 var _squad_notes: Array[String] = []
 var _pending_target_note := ""
+var _policy: AIDifficultyPolicy
 var current_mission_intent := MissionIntentData.new()
 
 enum MissionStepResult {
@@ -30,6 +31,7 @@ func _ready() -> void:
 	battle_controller.debug_player_ai_changed.connect(_on_debug_player_ai_changed)
 	unit.defeated.connect(_on_unit_defeated)
 	_objective_manager = get_tree().get_first_node_in_group("objective_manager") as ObjectiveManager
+	_policy = AIDifficultyPolicy.create(battle_controller.ai_difficulty)
 
 func _validate_dependencies() -> bool:
 	var valid := true
@@ -237,7 +239,7 @@ func _try_safe_second_advance(movement_target: TacticalUnit) -> bool:
 
 func _is_safe_advance_cell(candidate: Vector3i) -> bool:
 	var current := battle_controller.grid_manager.get_unit_grid(unit)
-	return _advance_exposure(candidate) <= _advance_exposure(current) + 0.01
+	return _policy.permits_advance(_advance_exposure(current), _advance_exposure(candidate))
 
 func _advance_exposure(candidate: Vector3i) -> float:
 	var grid := battle_controller.grid_manager
@@ -280,7 +282,7 @@ func _move_toward_range(target: TacticalUnit, desired_distance: int, safe_only :
 	for destination_index in range(1, path.size()):
 		var candidate = battle_controller.world_to_grid(path[destination_index])
 		var squad_adjustment := _squad_context.destination_adjustment(unit, candidate) if _squad_context else 0.0
-		var score := float(destination_index) + squad_adjustment
+		var score := _policy.score_path_progress(destination_index, squad_adjustment)
 		if squad_adjustment > -1000.0 and score > best_score and reachable.has(candidate) and battle_controller.grid_manager.can_unit_occupy_cell(unit, candidate) and (not safe_only or _is_safe_advance_cell(candidate)):
 			best_candidate = candidate
 			best_adjustment = squad_adjustment
@@ -307,7 +309,7 @@ func _move_toward_cell(target_cell: Vector3i, safe_only := false) -> bool:
 	for index in range(1, path.size()):
 		var candidate := battle_controller.world_to_grid(path[index])
 		var squad_adjustment := _squad_context.destination_adjustment(unit, candidate) if _squad_context else 0.0
-		var score := float(index) + squad_adjustment
+		var score := _policy.score_path_progress(index, squad_adjustment)
 		if squad_adjustment > -1000.0 and score > best_score and reachable.has(candidate) and battle_controller.grid_manager.can_unit_occupy_cell(unit, candidate) and (not safe_only or _is_safe_advance_cell(candidate)):
 			best_candidate = candidate
 			best_adjustment = squad_adjustment
@@ -354,7 +356,7 @@ func _survival_position_score(candidate: Vector3i, start: Vector3i) -> float:
 	var grid := battle_controller.grid_manager
 	var score := -0.15 * start.distance_to(candidate)
 	if _squad_context:
-		score += _squad_context.destination_adjustment(unit, candidate)
+		score += _squad_context.destination_adjustment(unit, candidate) * _policy.crowding_penalty_weight
 	var nearest_hostile := INF
 	for hostile in _get_hostile_units():
 		if not is_instance_valid(hostile):
@@ -363,11 +365,11 @@ func _survival_position_score(candidate: Vector3i, start: Vector3i) -> float:
 		nearest_hostile = minf(nearest_hostile, candidate.distance_to(hostile_cell))
 		match CombatRules.get_directional_cover(hostile_cell, candidate, grid):
 			MapCellData.CoverType.LOW:
-				score += 24.0
+				score += 24.0 * _policy.survival_cover_weight
 			MapCellData.CoverType.FULL:
-				score += 36.0
+				score += 36.0 * _policy.survival_cover_weight
 	if nearest_hostile < INF:
-		score += minf(nearest_hostile, 12.0) * 1.5
+		score += minf(nearest_hostile, 12.0) * 1.5 * _policy.survival_separation_weight
 	var extraction := grid.map_data.get_objective_zone(&"extract")
 	if not extraction.is_empty():
 		var nearest_exit := INF
@@ -385,8 +387,7 @@ func _find_attack_target() -> TacticalUnit:
 			continue
 		if battle_controller.evaluate_attack(unit, candidate).is_legal:
 			var focus_adjustment := _squad_context.target_adjustment(unit, candidate) if _squad_context else 0.0
-			var score := float(candidate.stats.max_hp - candidate.stats.current_hp) + focus_adjustment
-			if candidate.stats.current_hp <= 25: score += 20.0
+			var score := _policy.score_target(candidate.stats.max_hp - candidate.stats.current_hp, candidate.stats.current_hp, focus_adjustment)
 			if score > best_score:
 				best_target = candidate
 				best_score = score

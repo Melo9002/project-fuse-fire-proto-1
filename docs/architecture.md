@@ -50,6 +50,7 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 | `TacticalUnit` | Path animation, defeat relay, health-display creation | Changing unit movement or presentation |
 | `AIController` | Chooses among legal attacks, movement, and defense | Changing enemy priorities or difficulty |
 | `SquadContext` | Shares current-round reservations and intentions within one AI team | Adding small coordination score adjustments |
+| `AIDifficultyPolicy` | Holds Easy, Normal, and Hard decision weights | Tuning AI priorities without altering action validation |
 | `MissionIntent` | Describes the active mission goal for one automated unit | Adding objective-aware AI planning |
 | UI and visualizers | Display state and forward input | Changing feedback and presentation |
 | `TacticalCamera` | Bounded pan, zoom, and rotation | Changing how the battlefield is viewed |
@@ -63,7 +64,7 @@ Keep this layout while the prototype is small. Add folders when they group a rea
 
 ## Match setup and spawning
 
-`MatchSetup` collects independent player, allied, and enemy counts and configures a new `BattleLevel`. The level asks each `SpawnZone` for the requested number of marker transforms, instantiates the shared tactical-unit scene, fills the turn rosters, and adds one AI controller per unit. Only then does it tell `BattleController` to scan and start the match.
+`MatchSetup` collects independent player, allied, and enemy counts, mission objective, and AI difficulty, then configures a new `BattleLevel`. The level asks each `SpawnZone` for the requested number of marker transforms, instantiates the shared tactical-unit scene, fills the turn rosters, and adds one AI controller per unit. Only then does it tell `BattleController` to scan and start the match.
 
 ## Mission actors
 
@@ -87,7 +88,7 @@ Rounds proceed through `PLAYER_TURN → ALLY_TURN → ENEMY_TURN`; an empty alli
 
 `ObjectiveManager.get_mission_intent()` translates active objective state into a faction-relevant `MissionIntent`. The value identifies the objective, intent kind, zone, actor IDs, requirement status, and reason without executing an action. Each objective carries a faction mask declaring who pursues it; player and ally are the default, while future asymmetric missions may assign separate goals to enemies. AI therefore receives a mission goal alongside its combat choices. Rescue precedes extraction, and extraction unlocks only when mission rules allow it.
 
-Reach and Extract intents are executable AI goals. `AIController` compares every eligible zone cell by reachable path length, advances once toward the best route, and then retains any remaining AP for combat. An eligible unit already in extraction, including one with zero AP, calls `ObjectiveManager.try_extract()` and therefore the shared `ExtractAction`. Roster removal decides whether another automated player activates or the allied queue advances, avoiding a second phase transition from the AI controller.
+Reach and Extract intents are executable AI goals. `AIController` compares every eligible zone cell by reachable path length and advances toward the best route. If no legal shot follows the first move, it can advance again when its exposure does not worsen under the current difficulty policy. An eligible unit already in extraction, including one with zero AP, calls `ObjectiveManager.try_extract()` and therefore the shared `ExtractAction`. Roster removal decides whether another automated player activates or the allied queue advances, avoiding a second phase transition from the AI controller.
 
 Protect and Rescue intents are executable AI goals as well. A protecting combatant returns to a three-cell escort radius when separated, then uses ordinary combat logic while nearby. A rescuer pathfinds to an adjacent cell and calls `ObjectiveManager.try_rescue()` through the zero-AP `RescueAction`; manual movement-triggered pickup uses that same gateway. The rescued actor is removed from grid occupancy and attached to the carrier's existing carried-unit state, which reduces movement speed. Completion exposes the Extract intent, so the carrier uses the normal objective route and `ExtractAction` to evacuate both actors.
 
@@ -96,6 +97,8 @@ During an active Survive objective, `AIController` scores every reachable stoppi
 Enemy Evacuation combines a required player-owned Eliminate objective with an optional enemy-owned Extract objective. Objective definitions may name their own `MapData` zone, allowing enemy AI to select `enemy_extract` while friendly missions retain `extract`. The enemy exit is presented in orange. `ObjectiveManager` accepts extraction from the appropriate faction, records escaped enemies separately, and fails the required interception objective on the first escape. `TurnManager` removes an active enemy from its queue without skipping the following activation.
 
 `BattleController` owns one `SquadContext` for the friendly alliance and one for enemies. Each context resets when a new round begins and removes an actor's stale intention before its next activation. AI controllers publish committed destinations, targets, and objective handlers after choosing through their existing local policy. Later teammates apply large exact-destination penalties, smaller adjacent-crowding penalties, and gradual target-focus penalties while preserving legal focus fire. Rescue extraction adds one coordination rule: non-carriers support the current carrier until that mobile objective is safe. The decision record carries a short `squad_adjustments` explanation for F3; the context never executes actions or bypasses shared validation.
+
+`BattleLevel` passes the match setup's selected difficulty to `BattleController`, and each `AIController` creates an `AIDifficultyPolicy` for that tier. The policy weights vulnerable-target and finisher scores, squad focus and movement penalties, survival cover and separation, and acceptable exposure for a second advance. Normal uses the existing weights. The policy affects only ranking and risk preferences; every chosen action still goes through `BattleController` and the same combat, AP, movement, and objective rules. F3 includes the active tier in its decision record.
 
 ## Battlefield validation
 

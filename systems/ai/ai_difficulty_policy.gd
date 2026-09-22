@@ -1,0 +1,54 @@
+class_name AIDifficultyPolicy
+extends RefCounted
+
+enum Tier { EASY, NORMAL, HARD }
+
+var tier: Tier = Tier.NORMAL
+var wounded_target_weight := 1.0
+var finishing_bonus_weight := 1.0
+var focus_penalty_weight := 1.0
+var movement_progress_weight := 1.0
+var crowding_penalty_weight := 1.0
+var survival_cover_weight := 1.0
+var survival_separation_weight := 1.0
+var safe_advance_exposure_tolerance := 0.01
+
+static func get_label(selected_tier: Tier) -> String:
+	match selected_tier:
+		Tier.EASY:
+			return "Easy"
+		Tier.HARD:
+			return "Hard"
+	return "Normal"
+
+static func create(selected_tier: Tier) -> AIDifficultyPolicy:
+	var policy := AIDifficultyPolicy.new()
+	policy.tier = selected_tier
+	match selected_tier:
+		Tier.EASY:
+			policy.wounded_target_weight = 0.35
+			policy.finishing_bonus_weight = 0.25
+			policy.focus_penalty_weight = 0.25
+			policy.movement_progress_weight = 1.1
+			policy.crowding_penalty_weight = 0.5
+			policy.survival_cover_weight = 0.6
+			policy.survival_separation_weight = 0.6
+			policy.safe_advance_exposure_tolerance = 0.4
+		Tier.HARD:
+			policy.wounded_target_weight = 1.3
+			policy.finishing_bonus_weight = 1.5
+			policy.focus_penalty_weight = 0.7
+			policy.crowding_penalty_weight = 1.2
+			policy.survival_cover_weight = 1.35
+			policy.survival_separation_weight = 1.2
+	return policy
+
+func score_target(missing_hp: int, current_hp: int, focus_adjustment: float) -> float:
+	var finisher := 20.0 if current_hp <= 25 else 0.0
+	return missing_hp * wounded_target_weight + finisher * finishing_bonus_weight + focus_adjustment * focus_penalty_weight
+
+func score_path_progress(step_index: int, squad_adjustment: float) -> float:
+	return step_index * movement_progress_weight + squad_adjustment * crowding_penalty_weight
+
+func permits_advance(current_exposure: float, candidate_exposure: float) -> bool:
+	return candidate_exposure <= current_exposure + safe_advance_exposure_tolerance

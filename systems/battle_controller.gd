@@ -34,6 +34,7 @@ var current_attack_zone: Array[Vector3i] = []
 var _last_attack_preview := ""
 var debug_enemy_control: bool = false
 var debug_player_ai: bool = false
+var ai_difficulty: AIDifficultyPolicy.Tier = AIDifficultyPolicy.Tier.NORMAL
 var _squad_contexts: Dictionary[int, SquadContext] = {}
 var is_action_in_progress: bool = false:
 	set(value):
@@ -312,6 +313,7 @@ func record_ai_decision(actor: TacticalUnit, action: String, subject: String, re
 		"alternatives": alternatives,
 		"mission_goal": mission_goal,
 		"squad_adjustments": squad_adjustments,
+		"difficulty": AIDifficultyPolicy.get_label(ai_difficulty),
 	})
 
 func try_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:

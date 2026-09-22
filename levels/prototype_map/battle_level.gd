@@ -24,8 +24,9 @@ var generated_size := Vector2i(32, 24)
 var include_vip := false
 var vip_behavior := MissionActor.VIPBehavior.PLAYER_CONTROLLED
 var mission_definition: MissionDefinition
+var ai_difficulty: AIDifficultyPolicy.Tier = AIDifficultyPolicy.Tier.NORMAL
 
-func configure(player_count: int, enemy_count: int, generate_map: bool = false, map_seed: int = 1, ally_count: int = 0, map_size := Vector2i(32, 24), add_vip: bool = false, behavior: MissionActor.VIPBehavior = MissionActor.VIPBehavior.PLAYER_CONTROLLED, selected_mission: MissionDefinition = null) -> void:
+func configure(player_count: int, enemy_count: int, generate_map: bool = false, map_seed: int = 1, ally_count: int = 0, map_size := Vector2i(32, 24), add_vip: bool = false, behavior: MissionActor.VIPBehavior = MissionActor.VIPBehavior.PLAYER_CONTROLLED, selected_mission: MissionDefinition = null, selected_difficulty: AIDifficultyPolicy.Tier = AIDifficultyPolicy.Tier.NORMAL) -> void:
 	generated_size = map_size if FlatMapGenerator.MAP_SIZES.has(map_size) else Vector2i(32, 24)
 	player_unit_count = clampi(player_count, 1, 5)
 	enemy_unit_count = clampi(enemy_count, 1, 5)
@@ -35,8 +36,11 @@ func configure(player_count: int, enemy_count: int, generate_map: bool = false, 
 	include_vip = add_vip
 	vip_behavior = behavior
 	mission_definition = selected_mission
+	ai_difficulty = selected_difficulty
+	battle_controller.ai_difficulty = selected_difficulty
 
 func _ready() -> void:
+	print("[AI Difficulty] %s" % AIDifficultyPolicy.get_label(ai_difficulty))
 	if mission_definition != null:
 		objective_manager.load_mission(mission_definition)
 	if use_generated_map:

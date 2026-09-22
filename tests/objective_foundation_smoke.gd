@@ -53,7 +53,7 @@ func _run() -> void:
 	var setup := load("res://ui/match_setup.tscn").instantiate() as MatchSetup
 	root.add_child(setup)
 	await process_frame
-	var objective_option := setup.get_node("CenterContainer/Panel/Margin/VBox/ObjectiveSetup").get_child(1) as OptionButton
+	var objective_option := setup.objective_option
 	var setup_panel := setup.get_node("CenterContainer/Panel") as PanelContainer
 	check(setup_panel.global_position.y >= 0.0 and setup_panel.global_position.y + setup_panel.size.y <= setup.size.y, "Match setup fits inside the 720p reference viewport")
 	check(setup.auto_seed_toggle.button_pressed and setup.seed_input.value >= 1, "A fresh setup prepares a valid automatic seed")
