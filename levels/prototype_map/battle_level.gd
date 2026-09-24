@@ -21,17 +21,19 @@ var allied_unit_count: int = 0
 var use_generated_map: bool = false
 var generation_seed: int = 1
 var generated_size := Vector2i(32, 24)
+var use_refinery_map := false
 var include_vip := false
 var vip_behavior := MissionActor.VIPBehavior.PLAYER_CONTROLLED
 var mission_definition: MissionDefinition
 var ai_difficulty: AIDifficultyPolicy.Tier = AIDifficultyPolicy.Tier.NORMAL
 
-func configure(player_count: int, enemy_count: int, generate_map: bool = false, map_seed: int = 1, ally_count: int = 0, map_size := Vector2i(32, 24), add_vip: bool = false, behavior: MissionActor.VIPBehavior = MissionActor.VIPBehavior.PLAYER_CONTROLLED, selected_mission: MissionDefinition = null, selected_difficulty: AIDifficultyPolicy.Tier = AIDifficultyPolicy.Tier.NORMAL) -> void:
+func configure(player_count: int, enemy_count: int, generate_map: bool = false, map_seed: int = 1, ally_count: int = 0, map_size := Vector2i(32, 24), add_vip: bool = false, behavior: MissionActor.VIPBehavior = MissionActor.VIPBehavior.PLAYER_CONTROLLED, selected_mission: MissionDefinition = null, selected_difficulty: AIDifficultyPolicy.Tier = AIDifficultyPolicy.Tier.NORMAL, refinery: bool = false) -> void:
 	generated_size = map_size if FlatMapGenerator.MAP_SIZES.has(map_size) else Vector2i(32, 24)
 	player_unit_count = clampi(player_count, 1, 5)
 	enemy_unit_count = clampi(enemy_count, 1, 5)
 	allied_unit_count = clampi(ally_count, 0, 5)
 	use_generated_map = generate_map
+	use_refinery_map = refinery
 	generation_seed = map_seed
 	include_vip = add_vip
 	vip_behavior = behavior
@@ -56,7 +58,7 @@ func _ready() -> void:
 		rig._set_zoom(42.0 * scale_factor)
 		var width := int(grid.map_floor.size.x / grid.cell_size)
 		var depth := int(grid.map_floor.size.z / grid.cell_size)
-		var generated_map := FlatMapGenerator.generate_with_cover(width, depth, grid.cell_size, generation_seed, 5)
+		var generated_map := FlatMapGenerator.generate_with_cover(width, depth, grid.cell_size, generation_seed, 5, use_refinery_map)
 		var generated_geometry := Node3D.new()
 		generated_geometry.name = "GeneratedTerrain"
 		add_child(generated_geometry)
@@ -66,7 +68,7 @@ func _ready() -> void:
 		_spawn_generated_vip(generated_map)
 		_spawn_generated_team(enemy_unit_count, TacticalUnit.Faction.ENEMY, enemy_units_parent, generated_map)
 		var cover_counts := _count_cover(generated_map)
-		print_rich("[color=cyan][MapGenerator][/color] COVER — seed %d, %dx%d, %d low, %d full, %d building(s)" % [generation_seed, width, depth, cover_counts.x, cover_counts.y, generated_map.buildings.size()])
+		print_rich("[color=cyan][MapGenerator][/color] COVER — seed %d, %dx%d, %d low, %d full, %d building(s), %d platform(s), %d hill(s)" % [generation_seed, width, depth, cover_counts.x, cover_counts.y, generated_map.buildings.size(), generated_map.platforms.size(), generated_map.hills.size()])
 		if await battle_controller.initialize_battle(generated_map):
 			_initialize_objectives()
 	else:

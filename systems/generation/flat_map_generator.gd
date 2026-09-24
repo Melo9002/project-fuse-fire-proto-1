@@ -1,6 +1,8 @@
 class_name FlatMapGenerator
 extends RefCounted
 
+const RefineryLayout = preload("res://systems/generation/refinery_layout_builder.gd")
+
 const MAP_SIZES: Array[Vector2i] = [Vector2i(24, 20), Vector2i(32, 24), Vector2i(40, 30)]
 const CONTAINER_HEIGHT := 2.0
 const BUILDING_ROOF_LEVEL := 3
@@ -48,7 +50,7 @@ static func generate(width: int, depth: int, cell_size: float, map_seed: int, sp
 	map_data.rebuild_los_index()
 	return map_data
 
-static func generate_with_cover(width: int, depth: int, cell_size: float, map_seed: int, spawn_capacity: int = 5) -> MapData:
+static func generate_with_cover(width: int, depth: int, cell_size: float, map_seed: int, spawn_capacity: int = 5, refinery: bool = false) -> MapData:
 	var map_data := generate(width, depth, cell_size, map_seed, spawn_capacity)
 	map_data.source_kind = "generated_cover"
 	var rng := RandomNumberGenerator.new()
@@ -59,8 +61,18 @@ static func generate_with_cover(width: int, depth: int, cell_size: float, map_se
 		for z in range(2, depth - 2):
 			anchors.append(Vector3i(x, 0, z))
 	_shuffle_cells(anchors, rng)
-	var building_cells := _place_buildings(map_data, anchors, rng, width, depth, center_row, cell_size)
-	GeneratedBuildingExpansion.apply(map_data, rng)
+	var building_cells := 0
+	if refinery:
+		RefineryLayout.apply(map_data, cell_size)
+	else:
+		building_cells = _place_buildings(map_data, anchors, rng, width, depth, center_row, cell_size)
+		GeneratedBuildingExpansion.apply(map_data, rng)
+		GeneratedElevationPlacer.apply(map_data, rng, cell_size)
+	var access_rng := RandomNumberGenerator.new()
+	access_rng.seed = 2202
+	GeneratedTraversalBuilder.apply(map_data, access_rng if refinery else rng, cell_size)
+	if refinery:
+		map_data.source_kind = "generated_refinery"
 	var container_cells := _place_containers(map_data, anchors, rng, width, depth, center_row)
 
 	var desired_cover := clampi(floori(float(width * depth) / 10.0), 12, anchors.size())
@@ -103,6 +115,14 @@ static func _can_place_formation(map_data: MapData, formation: Array, width: int
 		for building in map_data.buildings:
 			if building.reserved_area.has_point(Vector2i(grid_position.x, grid_position.z)):
 				return false
+		for platform in map_data.platforms:
+			if platform.reserved_area.has_point(Vector2i(grid_position.x, grid_position.z)):
+				return false
+		for hill in map_data.hills:
+			if hill.reserved_area.has_point(Vector2i(grid_position.x, grid_position.z)):
+				return false
+		if _is_generated_traversal_column(map_data, grid_position):
+			return false
 		for footprint in map_data.containers:
 			if footprint.grow(1).has_point(Vector2i(grid_position.x, grid_position.z)):
 				return false
@@ -112,7 +132,7 @@ static func _can_place_formation(map_data: MapData, formation: Array, width: int
 		if absi(grid_position.z - center_row) <= 1:
 			return false
 		var cell := map_data.get_cell(grid_position)
-		if not cell or cell.cover_type != MapCellData.CoverType.NONE:
+		if not cell or not cell.walkable or cell.cover_type != MapCellData.CoverType.NONE:
 			return false
 		if cover_type == MapCellData.CoverType.FULL and _has_adjacent_full_cover(map_data, grid_position):
 			return false
@@ -134,9 +154,21 @@ static func _place_containers(map_data: MapData, anchors: Array[Vector3i], rng: 
 		for building in map_data.buildings:
 			if building.reserved_area.intersects(clearance):
 				overlaps = true
+		for platform in map_data.platforms:
+			if platform.reserved_area.intersects(clearance):
+				overlaps = true
+		for hill in map_data.hills:
+			if hill.reserved_area.intersects(clearance):
+				overlaps = true
 		for existing in map_data.containers:
 			if existing.grow(1).intersects(clearance):
 				overlaps = true
+		if overlaps:
+			continue
+		for x in range(clearance.position.x, clearance.end.x):
+			for z in range(clearance.position.y, clearance.end.y):
+				if _is_generated_traversal_column(map_data, Vector3i(x, 0, z)) or not map_data.get_cell(Vector3i(x, 0, z)).walkable:
+					overlaps = true
 		if overlaps:
 			continue
 		map_data.containers.append(footprint)
@@ -245,4 +277,14 @@ static func _has_adjacent_full_cover(map_data: MapData, grid_position: Vector3i)
 		var neighbor := map_data.get_cell(grid_position + direction)
 		if neighbor and neighbor.cover_type == MapCellData.CoverType.FULL:
 			return true
+	return false
+
+static func _is_generated_traversal_column(map_data: MapData, position: Vector3i) -> bool:
+	var column := Vector2i(position.x, position.z)
+	for traversal in map_data.generated_traversals:
+		if Vector2i(traversal.from_cell.x, traversal.from_cell.z) == column or Vector2i(traversal.to_cell.x, traversal.to_cell.z) == column:
+			return true
+		for cell in traversal.path_cells:
+			if Vector2i(cell.x, cell.z) == column:
+				return true
 	return false

@@ -4,8 +4,11 @@ extends RefCounted
 var cells: Dictionary = {}
 var containers: Array[Rect2i] = []
 var buildings: Array[GeneratedBuildingData] = []
+var platforms: Array[GeneratedPlatformData] = []
+var hills: Array[GeneratedHillData] = []
 var columns: Dictionary = {}
 var traversal_links: Array[TraversalLinkData] = []
+var generated_traversals: Array[GeneratedTraversalData] = []
 var los_blocking_cells: Array[MapCellData] = []
 var zones: Dictionary[StringName, MapZoneData] = {}
 var source_kind: String = "authored"
@@ -93,9 +96,12 @@ func rebuild_los_index() -> void:
 func clear() -> void:
 	containers.clear()
 	buildings.clear()
+	platforms.clear()
+	hills.clear()
 	cells.clear()
 	columns.clear()
 	traversal_links.clear()
+	generated_traversals.clear()
 	los_blocking_cells.clear()
 	zones.clear()
 	source_kind = "authored"

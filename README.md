@@ -102,6 +102,12 @@ Run `godot_console --headless --path . --script res://tests/container_maps_smoke
 
 Generated maps place solid buildings with 3 m walkable roofs and a ground-to-roof ladder. `GeneratedBuildingExpansion` adds an alternate stair approach where space permits and gives each building a seeded 65% chance of a coherent 2×2 utility floor at 6 m, reached by a second ladder. Stairs use ordinary neighboring cells at heights 1 and 2; the existing one-level step rule connects them to ground and roof. Stairs and upper-floor walls block movement and LOS beneath their surfaces. Reserved approaches keep later cover placement clear. These are exterior routes; interiors, larger upper floors, and smooth generated ramps remain deferred while generation work is paused.
 
+Generated maps contain seeded freestanding platforms at elevation levels 2 or 3. Their decks are ordinary walkable `MapData` cells with local pathfinding and click surfaces. Generated ladders, stairs, or ramps connect every deck to the ground and reserve their route from later cover placement.
+
+Match Setup also offers **Special — Refinery**, a 40×30 generated layout with four elevated industrial platforms. It guarantees visible ladder, stair, and ramp examples while retaining seeded cover, buildings, and the large-map hill.
+
+Large 40×30 maps add one seeded 7×7 terraced hill. Its three walkable elevation tiers use the ordinary one-level step rule, while solid terrain beneath the surface blocks movement and line of sight.
+
 Generated building presentation uses readable concrete walls, a recessed roof cap, doors, window panels, and rooftop utility details. The scene combines cool ambient fill with an angled warm directional light so opposing facades remain visible. These decorative pieces have no gameplay collision; movement, cover, and LOS still come exclusively from `MapData`.
 
 To playtest this 6D slice: run the project with **F5**, enable `USE GENERATED MAP`, choose Medium (32×24), enter seed `12345`, and start a battle. Move a unit to the steps, then click the roof to climb; compare this with the yellow ground ladder. From the roof, use the second ladder to reach the 2×2 utility floor. Check descent, AP use, and attacks at different heights. This seed should report 786 cells and 2 traversal links. Restart with the same size and seed to reproduce the layout. Run `godot_console --headless --path . --script res://tests/generated_buildings_smoke.gd` for 300 seeds plus runtime movement, AP, occupancy, and click-surface checks.

@@ -2,8 +2,16 @@ class_name GeneratedTerrainPresenter
 extends RefCounted
 
 static func build(map_data: MapData, parent: Node3D, cell_size: float) -> void:
+	if map_data.source_kind == "generated_refinery":
+		preload("res://systems/generation/refinery_presenter.gd").build(map_data, parent, cell_size)
 	var container_cells: Dictionary = {}
 	var building_cells: Dictionary = {}
+	for hill in map_data.hills:
+		_build_hill(map_data, parent, cell_size, hill)
+	for platform in map_data.platforms:
+		_build_platform(map_data, parent, cell_size, platform)
+	for traversal in map_data.generated_traversals:
+		_build_generated_traversal(map_data, parent, cell_size, traversal)
 	for building in map_data.buildings:
 		_build_building(map_data, parent, cell_size, building)
 		for stair in building.stair_cells:
@@ -33,6 +41,160 @@ static func build(map_data: MapData, parent: Node3D, cell_size: float) -> void:
 		block.set_meta("grid_position", cell.grid_position)
 		block.set_meta("cover_type", cell.cover_type)
 		parent.add_child(block)
+
+static func _build_platform(map_data: MapData, parent: Node3D, cell_size: float, platform: GeneratedPlatformData) -> void:
+	var first := map_data.get_cell(platform.cells[0])
+	var deck := Node3D.new()
+	deck.name = "Platform_%d_%d_%d" % [platform.footprint.position.x, platform.elevation_level, platform.footprint.position.y]
+	parent.add_child(deck)
+	var dimensions := Vector3(platform.footprint.size.x * cell_size, 0.22, platform.footprint.size.y * cell_size)
+	var center := first.world_position + Vector3(
+		(platform.footprint.size.x - 1) * cell_size * 0.5,
+		-dimensions.y * 0.5,
+		(platform.footprint.size.y - 1) * cell_size * 0.5
+	)
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.24, 0.29, 0.34)
+	material.metallic = 0.35
+	material.roughness = 0.7
+	_add_box(deck, dimensions, center, material)
+	_add_roof_collider(deck, dimensions, center)
+	_build_platform_rails(map_data, deck, cell_size, platform)
+	var ground := map_data.get_cell(Vector3i(platform.cells[0].x, 0, platform.cells[0].z))
+	var deck_bottom := first.world_position.y - dimensions.y
+	var support_height := deck_bottom - ground.world_position.y
+	var corners := [
+		Vector2(0, 0),
+		Vector2(platform.footprint.size.x - 1, 0),
+		Vector2(0, platform.footprint.size.y - 1),
+		Vector2(platform.footprint.size.x - 1, platform.footprint.size.y - 1),
+	]
+	for corner in corners:
+		var support_center := Vector3(
+			first.world_position.x + corner.x * cell_size,
+			ground.world_position.y + support_height * 0.5,
+			first.world_position.z + corner.y * cell_size
+		)
+		_add_box(deck, Vector3(0.16, support_height, 0.16), support_center, material)
+
+static func _build_platform_rails(data: MapData, parent: Node3D, cell_size: float, platform: GeneratedPlatformData) -> void:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.85, 0.63, 0.16)
+	var rails := Node3D.new()
+	rails.name = "PlatformRails"
+	parent.add_child(rails)
+	for position in platform.cells:
+		# Leave a full cell opening at access landings.
+		var landing := false
+		for traversal in data.generated_traversals:
+			if traversal.from_cell == position or traversal.to_cell == position:
+				landing = true
+				break
+		if landing:
+			continue
+		for direction in [Vector3i.LEFT, Vector3i.RIGHT, Vector3i.FORWARD, Vector3i.BACK]:
+			var neighbor := data.get_cell(position + direction)
+			if neighbor and neighbor.walkable:
+				continue
+			var outward := Vector3(direction)
+			var along := Vector3(-outward.z, 0, outward.x)
+			var center := data.get_cell(position).world_position + outward * cell_size * 0.47
+			var start := center - along * cell_size * 0.5
+			var finish := center + along * cell_size * 0.5
+			for height in [0.5, 0.95]:
+				var offset := Vector3.UP * float(height) * cell_size
+				_add_stair_beam(rails, start + offset, finish + offset, cell_size * 0.045, material)
+			_add_stair_beam(rails, center, center + Vector3.UP * cell_size * 0.95, cell_size * 0.045, material)
+
+static func _build_hill(map_data: MapData, parent: Node3D, cell_size: float, hill: GeneratedHillData) -> void:
+	var terrain := Node3D.new()
+	terrain.name = "Hill_%d_%d" % [hill.footprint.position.x, hill.footprint.position.y]
+	parent.add_child(terrain)
+	var earth := StandardMaterial3D.new()
+	earth.albedo_color = Color(0.29, 0.24, 0.16)
+	earth.roughness = 1.0
+	for position in hill.surface_cells:
+		var cell := map_data.get_cell(position)
+		var height := cell.world_position.y
+		var dimensions := Vector3(cell_size, height, cell_size)
+		var center := Vector3(cell.world_position.x, height * 0.5, cell.world_position.z)
+		_add_box(terrain, dimensions, center, earth)
+		_add_roof_collider(terrain, dimensions, center)
+
+static func _build_generated_traversal(map_data: MapData, parent: Node3D, cell_size: float, traversal: GeneratedTraversalData) -> void:
+	var structure := Node3D.new()
+	structure.name = "Traversal_%d_%s" % [traversal.kind, traversal.to_cell]
+	parent.add_child(structure)
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.78, 0.58, 0.12) if traversal.kind == GeneratedTraversalData.Kind.LADDER else Color(0.38, 0.43, 0.46)
+	material.metallic = 0.45
+	material.roughness = 0.62
+	if traversal.kind == GeneratedTraversalData.Kind.LADDER:
+		_build_ladder_between(map_data, structure, cell_size, traversal.from_cell, traversal.to_cell)
+		return
+	if traversal.kind == GeneratedTraversalData.Kind.BRIDGE:
+		for position in traversal.path_cells.slice(1, traversal.path_cells.size() - 1):
+			var cell := map_data.get_cell(position)
+			var dimensions := Vector3(cell_size, 0.18, cell_size)
+			var center := cell.world_position - Vector3.UP * dimensions.y * 0.5
+			_add_box(structure, dimensions, center, material)
+			_add_roof_collider(structure, dimensions, center)
+		return
+	if traversal.kind == GeneratedTraversalData.Kind.STAIRS:
+		_build_open_stairs(map_data, structure, cell_size, traversal, material)
+		return
+	for position in traversal.path_cells:
+		if position.y == 0 or position == traversal.to_cell:
+			continue
+		var cell := map_data.get_cell(position)
+		var dimensions := Vector3(cell_size * 0.9, cell.world_position.y, cell_size * 0.9)
+		var center := cell.world_position - Vector3.UP * dimensions.y * 0.5
+		_add_box(structure, dimensions, center, material)
+		_add_roof_collider(structure, dimensions, center)
+
+static func _build_open_stairs(map_data: MapData, parent: Node3D, cell_size: float, traversal: GeneratedTraversalData, material: Material) -> void:
+	var bottom := map_data.get_cell(traversal.from_cell).world_position
+	var top := map_data.get_cell(traversal.to_cell).world_position
+	var direction := Vector3(top.x - bottom.x, 0, top.z - bottom.z).normalized()
+	var across := Vector3(-direction.z, 0.0, direction.x)
+	var rail_material := StandardMaterial3D.new()
+	rail_material.albedo_color = Color(0.85, 0.63, 0.16)
+	# Five visual treads per graph edge. Movement keeps the existing ramp-like
+	# interpolation between cells; the decoration adds no movement obstacles.
+	for index in range(traversal.path_cells.size() - 1):
+		var start := map_data.get_cell(traversal.path_cells[index]).world_position
+		var finish := map_data.get_cell(traversal.path_cells[index + 1]).world_position
+		var run := Vector2(finish.x - start.x, finish.z - start.z).length()
+		for step in range(5):
+			var point := start.lerp(finish, float(step) / 5.0)
+			var size := Vector3(cell_size * 0.88, cell_size * 0.06, run / 5.0)
+			if absf(direction.x) > 0.5:
+				size = Vector3(run / 5.0, cell_size * 0.06, cell_size * 0.88)
+			_add_box(parent, size, point - Vector3.UP * size.y * 0.5, material)
+		# Invisible sloping input surface follows the same world-space route.
+		var surface := Node3D.new()
+		parent.add_child(surface)
+		surface.position = (start + finish) * 0.5
+		surface.basis = Basis(-across, (finish - start).normalized().cross(-across), (finish - start).normalized())
+		_add_roof_collider(surface, Vector3(cell_size * 0.88, 0.04 * cell_size, start.distance_to(finish)), Vector3.DOWN * 0.02 * cell_size)
+	for side in [-1.0, 1.0]:
+		var offset: Vector3 = across * float(side) * cell_size * 0.46
+		_add_stair_beam(parent, bottom + offset - Vector3.UP * cell_size * 0.12, top + offset - Vector3.UP * cell_size * 0.12, cell_size * 0.12, material)
+		for height in [0.5, 0.95]:
+			_add_stair_beam(parent, bottom + offset + Vector3.UP * float(height) * cell_size, top + offset + Vector3.UP * float(height) * cell_size, cell_size * 0.045, rail_material)
+		for position in traversal.path_cells:
+			var point := map_data.get_cell(position).world_position + offset
+			_add_stair_beam(parent, point, point + Vector3.UP * cell_size * 0.95, cell_size * 0.045, rail_material)
+
+static func _add_stair_beam(parent: Node3D, start: Vector3, finish: Vector3, width: float, material: Material) -> void:
+	var beam := Node3D.new()
+	parent.add_child(beam)
+	beam.position = (start + finish) * 0.5
+	var axis := (finish - start).normalized()
+	var reference := Vector3.RIGHT if absf(axis.dot(Vector3.UP)) > 0.99 else Vector3.UP
+	var across := reference.cross(axis).normalized()
+	beam.basis = Basis(across, axis.cross(across), axis)
+	_add_box(beam, Vector3(width, width, start.distance_to(finish)), Vector3.ZERO, material)
 
 static func _material_for(cover_type: MapCellData.CoverType) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
@@ -160,8 +322,11 @@ static func _add_roof_collider(parent: Node3D, dimensions: Vector3, center: Vect
 	parent.add_child(body)
 
 static func _build_ladder(map_data: MapData, parent: Node3D, cell_size: float, building: GeneratedBuildingData) -> void:
-	var bottom := map_data.get_cell(building.ladder_ground_cell).world_position
-	var top := map_data.get_cell(building.ladder_roof_cell).world_position
+	_build_ladder_between(map_data, parent, cell_size, building.ladder_ground_cell, building.ladder_roof_cell)
+
+static func _build_ladder_between(map_data: MapData, parent: Node3D, cell_size: float, bottom_cell: Vector3i, top_cell: Vector3i) -> void:
+	var bottom := map_data.get_cell(bottom_cell).world_position
+	var top := map_data.get_cell(top_cell).world_position
 	var horizontal := Vector3(top.x - bottom.x, 0, top.z - bottom.z).normalized()
 	var across := Vector3(-horizontal.z, 0, horizontal.x)
 	var facade_center := (bottom + top) * 0.5
@@ -172,7 +337,8 @@ static func _build_ladder(map_data: MapData, parent: Node3D, cell_size: float, b
 	var height := top.y - bottom.y
 	for side in [-1.0, 1.0]:
 		_add_box(parent, Vector3(0.07, height, 0.07), facade_center + across * side * cell_size * 0.28, ladder_material)
-	for rung_index in range(1, building.roof_level * 3):
-		var rung_center := Vector3(facade_center.x, bottom.y + float(rung_index) * height / float(building.roof_level * 3), facade_center.z)
+	var rung_sections := maxi(2, top_cell.y - bottom_cell.y) * 3
+	for rung_index in range(1, rung_sections):
+		var rung_center := Vector3(facade_center.x, bottom.y + float(rung_index) * height / float(rung_sections), facade_center.z)
 		var rung_dimensions := Vector3(cell_size * 0.62, 0.055, 0.055) if absf(across.x) > 0.5 else Vector3(0.055, 0.055, cell_size * 0.62)
 		_add_box(parent, rung_dimensions, rung_center, ladder_material)

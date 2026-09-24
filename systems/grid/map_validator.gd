@@ -13,9 +13,52 @@ static func validate(map_data: MapData, pathfinder: Pathfinder, required_spawn_c
 	_validate_cells(map_data, pathfinder, result)
 	_validate_los_index(map_data, result)
 	_validate_links(map_data, pathfinder, result)
+	_validate_generated_traversals(map_data, pathfinder, result)
+	_validate_platforms(map_data, result)
+	_validate_hills(map_data, result)
 	_validate_zones(map_data, result)
 	_validate_spawns(map_data, pathfinder, required_spawn_counts, result)
 	return result
+
+static func _validate_generated_traversals(map_data: MapData, pathfinder: Pathfinder, result: MapValidationResult) -> void:
+	for traversal in map_data.generated_traversals:
+		if not traversal or not map_data.has_cell(traversal.from_cell) or not map_data.has_cell(traversal.to_cell):
+			result.add_error("GENERATED_TRAVERSAL_ENDPOINT_MISSING", "Generated traversal references a missing endpoint.")
+			continue
+		var route := pathfinder.calculate_3d_path(traversal.from_cell, traversal.to_cell) if pathfinder else PackedVector3Array()
+		if route.is_empty():
+			result.add_error("GENERATED_TRAVERSAL_DISCONNECTED", "Generated traversal does not connect its endpoints.", traversal.from_cell, true)
+
+static func _validate_platforms(map_data: MapData, result: MapValidationResult) -> void:
+	for platform in map_data.platforms:
+		if not platform or platform.cells.is_empty() or platform.elevation_level <= 0:
+			result.add_error("INVALID_PLATFORM", "A generated platform is missing its elevation data.")
+			continue
+		var expected_count := platform.footprint.size.x * platform.footprint.size.y
+		if platform.cells.size() != expected_count:
+			result.add_error("INCOMPLETE_PLATFORM", "A generated platform does not cover its full footprint.")
+		for position in platform.cells:
+			var cell := map_data.get_cell(position)
+			if not platform.footprint.has_point(Vector2i(position.x, position.z)) or position.y != platform.elevation_level:
+				result.add_error("PLATFORM_CELL_MISMATCH", "A platform cell lies outside its declared surface.", position, true)
+			elif not cell or not cell.walkable or not cell.can_stop:
+				result.add_error("PLATFORM_CELL_INVALID", "A platform surface must contain walkable stopping cells.", position, true)
+
+static func _validate_hills(map_data: MapData, result: MapValidationResult) -> void:
+	for hill in map_data.hills:
+		if not hill or hill.surface_cells.is_empty():
+			result.add_error("INVALID_HILL", "A generated hill has no surface data.")
+			continue
+		var expected_count := hill.footprint.size.x * hill.footprint.size.y
+		if hill.surface_cells.size() != expected_count:
+			result.add_error("INCOMPLETE_HILL", "A generated hill does not cover its full footprint.")
+		for position in hill.surface_cells:
+			var surface := map_data.get_cell(position)
+			var base := map_data.get_cell(Vector3i(position.x, 0, position.z))
+			if not hill.footprint.has_point(Vector2i(position.x, position.z)) or position.y < 1 or position.y > 3:
+				result.add_error("HILL_CELL_MISMATCH", "A hill cell lies outside its declared terrain.", position, true)
+			elif not surface or not surface.walkable or not surface.can_stop or not base or base.walkable or not base.blocks_line_of_sight:
+				result.add_error("HILL_CELL_INVALID", "A hill needs a walkable surface over solid terrain.", position, true)
 
 static func _validate_cells(map_data: MapData, pathfinder: Pathfinder, result: MapValidationResult) -> void:
 	for key in map_data.cells:

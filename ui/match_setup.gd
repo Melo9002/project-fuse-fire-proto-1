@@ -27,6 +27,7 @@ func _ready() -> void:
 	for index in FlatMapGenerator.MAP_SIZES.size():
 		var dimensions := FlatMapGenerator.MAP_SIZES[index]
 		map_size_option.add_item("%s — %d × %d tiles" % [size_names[index], dimensions.x, dimensions.y])
+	map_size_option.add_item("Special — Refinery (40 × 30)")
 	map_size_option.select(1)
 	map_size_option.disabled = not generated_map_toggle.button_pressed
 	start_button.pressed.connect(_start_battle)
@@ -34,6 +35,7 @@ func _ready() -> void:
 	enemy_count.value_changed.connect(_update_summary)
 	ally_count.value_changed.connect(_update_summary)
 	generated_map_toggle.toggled.connect(_on_generation_toggled)
+	map_size_option.item_selected.connect(func(_index: int): _update_summary(0.0))
 	auto_seed_toggle.toggled.connect(_on_auto_seed_toggled)
 	seed_input.value_changed.connect(_update_summary)
 	_refresh_seed_controls()
@@ -114,7 +116,7 @@ func _on_objective_selected(index: int) -> void:
 	_update_summary(0.0)
 
 func _update_summary(_value: float) -> void:
-	var map_label := "GENERATED" if generated_map_toggle.button_pressed else "HANDMADE"
+	var map_label := "REFINERY" if generated_map_toggle.button_pressed and map_size_option.selected == 3 else ("GENERATED" if generated_map_toggle.button_pressed else "HANDMADE")
 	var objective_label := MissionCatalog.get_preset_names()[objective_option.selected] if objective_option else "Eliminate"
 	var has_vip := vip_toggle != null and vip_toggle.button_pressed
 	var player_vip := 1 if has_vip and vip_behavior.selected == MissionActor.VIPBehavior.PLAYER_CONTROLLED else 0
@@ -152,11 +154,12 @@ func _start_battle() -> void:
 		generated_map_toggle.button_pressed,
 		int(seed_input.value),
 		int(ally_count.value),
-		FlatMapGenerator.MAP_SIZES[map_size_option.selected],
+		Vector2i(40, 30) if map_size_option.selected == 3 else FlatMapGenerator.MAP_SIZES[map_size_option.selected],
 		vip_toggle.button_pressed,
 		vip_behavior.selected,
 		MissionCatalog.create_mission(objective_option.selected, int(enemy_count.value), vip_toggle.button_pressed),
-		difficulty_option.selected
+		difficulty_option.selected,
+		map_size_option.selected == 3
 	)
 	get_tree().root.add_child(battle)
 	get_tree().current_scene = battle

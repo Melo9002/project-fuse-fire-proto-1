@@ -59,6 +59,9 @@ func _check_playable_generated_battle() -> void:
 	var cover_counts := _cover_counts(map_data)
 	var generated_geometry := level.get_node("GeneratedTerrain")
 	var expected_structures := cover_counts.x + cover_counts.y - map_data.containers.size() * 5 - map_data.buildings.size() * 11
+	expected_structures += map_data.platforms.size()
+	expected_structures += map_data.hills.size()
+	expected_structures += map_data.generated_traversals.size()
 	for building in map_data.buildings:
 		expected_structures -= building.stair_cells.size() + building.upper_cells.size()
 	check(generated_geometry.get_child_count() == expected_structures, "Multi-cell structures render once per data record")
