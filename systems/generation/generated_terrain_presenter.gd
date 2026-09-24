@@ -113,13 +113,33 @@ static func _build_hill(map_data: MapData, parent: Node3D, cell_size: float, hil
 	var earth := StandardMaterial3D.new()
 	earth.albedo_color = Color(0.29, 0.24, 0.16)
 	earth.roughness = 1.0
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var heights: Dictionary = {}
 	for position in hill.surface_cells:
-		var cell := map_data.get_cell(position)
-		var height := cell.world_position.y
-		var dimensions := Vector3(cell_size, height, cell_size)
-		var center := Vector3(cell.world_position.x, height * 0.5, cell.world_position.z)
-		_add_box(terrain, dimensions, center, earth)
-		_add_roof_collider(terrain, dimensions, center)
+		heights[Vector2i(position.x, position.z)] = map_data.get_cell(position).world_position
+	var bounds := hill.footprint.grow(1)
+	for x in range(bounds.position.x, bounds.end.x - 1):
+		for z in range(bounds.position.y, bounds.end.y - 1):
+			var points: Array[Vector3] = []
+			for offset in [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.ONE, Vector2i.DOWN]:
+				var key: Vector2i = Vector2i(x, z) + offset
+				points.append(heights.get(key, map_data.get_cell(Vector3i(key.x, 0, key.y)).world_position))
+			for index in [0, 1, 2, 0, 2, 3]:
+				surface.add_vertex(points[index])
+	surface.generate_normals()
+	var mesh := surface.commit()
+	var instance := MeshInstance3D.new()
+	instance.mesh = mesh
+	instance.material_override = earth
+	terrain.add_child(instance)
+	var body := StaticBody3D.new()
+	body.collision_layer = 2
+	body.collision_mask = 0
+	var collider := CollisionShape3D.new()
+	collider.shape = mesh.create_trimesh_shape()
+	body.add_child(collider)
+	terrain.add_child(body)
 
 static func _build_generated_traversal(map_data: MapData, parent: Node3D, cell_size: float, traversal: GeneratedTraversalData) -> void:
 	var structure := Node3D.new()

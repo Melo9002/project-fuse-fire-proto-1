@@ -31,9 +31,18 @@ When the selected unit spends its final AP, selection advances through the frien
 | Mouse at screen edge / WASD / arrow keys | Pan the camera within the battlefield |
 | Mouse wheel | Zoom in or out |
 | Hold middle mouse and drag | Rotate the camera |
+| Hold right mouse and drag | Grab and pan the map at the camera's focus height |
+| F / Home | Center the manually selected unit, including its elevation |
+| Alt + mouse wheel | Cycle legal surfaces under the cursor; the floor hint, movement preview and click use the same choice |
 | Q / E or Page Up / Page Down | Rotate the camera with the keyboard |
 
 Units start their phase with 2 AP and have 100 HP. Attacks deal 25 damage, or 12 against a defending unit. Attack range uses cardinal grid distance. Every unit uses `UnitStats.speed` for its movement budget. Animation speed is separate.
+
+Camera height gently follows the manually selected unit; selection does not automatically recenter horizontal position. Focus preserves zoom and rotation. Edge scrolling retains a 36-pixel inner band and 72-pixel outside tolerance, and pauses during mouse camera gestures, over UI, or on focus loss. Left click is reserved for selection and orders. The original selection outline is unchanged.
+
+Stacked-floor selection resets to the nearest legal surface when the set of cells under the cursor changes. Alt + wheel can select intermediate floors as well as ground; a selected lower floor also filters unit picking by that elevation. Selection through geometry does not bypass combat line of sight or movement/AP rules.
+
+Run `godot_console --headless --path . --script res://tests/elevation_selection_smoke.gd` for screen-ray checks of refinery tower tops, stair surfaces, ground beneath decks, unit selection and camera recovery.
 
 ## Understand the code
 

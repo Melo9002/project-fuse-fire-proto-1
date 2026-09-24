@@ -71,11 +71,12 @@ battle_controller = NodePath("Systems/BattleController")
 objective_manager = NodePath("Systems/ObjectiveManager")
 objective_zone_visualizer = NodePath("Visualizers/ObjectiveZoneVisualizer")
 
-[node name="CameraRig" type="Node3D" parent="." node_paths=PackedStringArray("map_floor", "camera")]
+[node name="CameraRig" type="Node3D" parent="." node_paths=PackedStringArray("map_floor", "camera", "turn_manager")]
 rotation_degrees = Vector3(-45, 0, 0)
 script = ExtResource("15_camera")
 map_floor = NodePath("../Environment/MapFloor")
 camera = NodePath("Camera3D")
+turn_manager = NodePath("../Systems/TurnManager")
 
 [node name="Camera3D" type="Camera3D" parent="CameraRig" unique_id=743300731]
 position = Vector3(0, 0, 42)
@@ -84,10 +85,11 @@ fov = 25.70093
 [node name="Systems" type="Node3D" parent="." unique_id=635339450]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.72652817, 1.000001, 0.05766487)
 
-[node name="MouseRaycaster" type="Node3D" parent="Systems" unique_id=168739336 node_paths=PackedStringArray("camera")]
+[node name="MouseRaycaster" type="Node3D" parent="Systems" unique_id=168739336 node_paths=PackedStringArray("camera", "grid_manager")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.72652817, -1.000001, -0.05766487)
 script = ExtResource("1_822c8")
 camera = NodePath("../../CameraRig/Camera3D")
+grid_manager = NodePath("../GridManager")
 
 [node name="BattleController" type="Node3D" parent="Systems" unique_id=1810984402 node_paths=PackedStringArray("mouse_raycaster", "grid_cursor", "path_visualizer", "cover_visualizer", "shot_trajectory_visualizer", "grid_manager", "turn_manager")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.72652817, -1.000001, -0.05766487)

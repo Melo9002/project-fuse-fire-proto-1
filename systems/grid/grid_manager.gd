@@ -65,6 +65,12 @@ func world_to_grid(pos: Vector3) -> Vector3i:
 	var x = floori((pos.x + half_width) / cell_size)
 	var z = floori((pos.z + half_depth) / cell_size)
 	var column = map_data.get_column_cells(x, z)
+	# A hill slope belongs to its surface cell even near the low edge of a tile.
+	for hill in map_data.hills:
+		if hill.footprint.has_point(Vector2i(x, z)):
+			for surface: MapCellData in column:
+				if surface.walkable:
+					return surface.grid_position
 	if column.is_empty():
 		var floor_top_y = map_floor.global_position.y + (map_floor.size.y / 2.0)
 		return Vector3i(x, roundi((pos.y - floor_top_y) / elevation_step), z)
