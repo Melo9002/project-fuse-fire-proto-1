@@ -25,8 +25,10 @@ func setup(unit: Node3D, stats: UnitStats, faction: int = 0) -> void:
 	_turn_manager = get_tree().get_first_node_in_group("turn_manager") as TurnManager
 	if _turn_manager:
 		_battle_controller = _turn_manager.get_parent().get_node_or_null("BattleController") as BattleController
-	if extract_button and not extract_button.pressed.is_connected(_on_extract_pressed):
-		extract_button.pressed.connect(_on_extract_pressed)
+	if extract_button and not extract_button.button_down.is_connected(_on_extract_pressed):
+		# A world-space bar may shift during edge scrolling before mouse release.
+		# Commit on button-down so a valid extraction click cannot be lost.
+		extract_button.button_down.connect(_on_extract_pressed)
 	if _turn_manager and not _turn_manager.active_unit_changed.is_connected(_on_active_unit_changed):
 		_turn_manager.active_unit_changed.connect(_on_active_unit_changed)
 	if _objective_manager:
@@ -112,6 +114,7 @@ func _on_extract_pressed() -> void:
 func _refresh_extract_button() -> void:
 	if extract_button:
 		extract_button.visible = false
+		extract_button.disabled = true
 		if not is_instance_valid(_target_unit) or not _target_unit is TacticalUnit:
 			return
 		var player_controlled := _turn_manager != null and _turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN and _turn_manager.player_units.has(_target_unit as TacticalUnit)
@@ -121,6 +124,7 @@ func _refresh_extract_button() -> void:
 		extract_button.visible = _objective_manager != null \
 			and (player_controlled or manually_controlled_enemy) \
 			and _objective_manager.can_extract(_target_unit as TacticalUnit)
+		extract_button.disabled = not extract_button.visible
 
 func _refresh_carry_label() -> void:
 	if carry_label:

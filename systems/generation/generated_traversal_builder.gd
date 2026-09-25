@@ -71,7 +71,11 @@ static func _add_sloped_access(data: MapData, platform: GeneratedPlatformData, k
 
 static func _edge_candidates(platform: GeneratedPlatformData, rng: RandomNumberGenerator) -> Array:
 	var result: Array = []
-	var center := platform.footprint.position + platform.footprint.size / 2
+	var half_size := Vector2i(
+		floori(float(platform.footprint.size.x) / 2.0),
+		floori(float(platform.footprint.size.y) / 2.0)
+	)
+	var center := platform.footprint.position + half_size
 	for direction in DIRECTIONS:
 		var edge := center
 		if direction.x < 0: edge.x = platform.footprint.position.x

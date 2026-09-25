@@ -17,6 +17,7 @@ static func validate(map_data: MapData, pathfinder: Pathfinder, required_spawn_c
 	_validate_platforms(map_data, result)
 	_validate_hills(map_data, result)
 	_validate_zones(map_data, result)
+	_validate_mission_placement(map_data, pathfinder, result)
 	_validate_spawns(map_data, pathfinder, required_spawn_counts, result)
 	return result
 
@@ -179,3 +180,31 @@ static func _validate_zones(map_data: MapData, result: MapValidationResult) -> v
 				result.add_error("ZONE_CELL_MISSING", "Zone %s references a cell outside the battlefield." % zone.zone_id, position, true)
 			elif not cell.walkable or not cell.can_stop:
 				result.add_error("ZONE_CELL_INVALID", "Zone %s must use walkable stopping cells." % zone.zone_id, position, true)
+
+static func _validate_mission_placement(map_data: MapData, pathfinder: Pathfinder, result: MapValidationResult) -> void:
+	if not pathfinder:
+		return
+	var deployment_cells: Dictionary[Vector3i, bool] = {}
+	for zone in map_data.get_zones_by_kind(MapZoneData.Kind.DEPLOYMENT):
+		for position in zone.cells:
+			deployment_cells[position] = true
+	var occupied: Dictionary[Vector3i, StringName] = {}
+	for zone_id in [&"reach", &"extract", &"enemy_extract", &"rescue_spawn"]:
+		var zone := map_data.get_zone(zone_id)
+		if not zone:
+			continue
+		for position in zone.cells:
+			if deployment_cells.has(position):
+				result.add_error("MISSION_ZONE_OVERLAPS_DEPLOYMENT", "Mission zone %s overlaps deployment." % zone_id, position, true)
+			if occupied.has(position):
+				result.add_error("MISSION_ZONES_OVERLAP", "Mission zones %s and %s overlap." % [occupied[position], zone_id], position, true)
+			occupied[position] = zone_id
+		var origins := map_data.get_spawn_cells(TacticalUnit.Faction.ENEMY if zone_id == &"enemy_extract" else TacticalUnit.Faction.PLAYER)
+		for position in zone.cells:
+			var reachable := false
+			for origin in origins:
+				if not pathfinder.calculate_3d_path(origin, position).is_empty():
+					reachable = true
+					break
+			if not reachable:
+				result.add_error("MISSION_ZONE_UNREACHABLE", "Mission zone %s cannot be reached by its pursuing faction." % zone_id, position, true)

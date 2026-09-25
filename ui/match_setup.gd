@@ -126,7 +126,7 @@ func _update_summary(_value: float) -> void:
 	var friendly_total := player_controlled + ai_controlled
 	if deployment_summary:
 		deployment_summary.text = "DEPLOYMENT — Player-controlled: %d | AI allies: %d | Enemies: %d\nTotal friendly actors: %d%s" % [player_controlled, ai_controlled, int(enemy_count.value), friendly_total, " (includes 1 additional VIP)" if has_vip else ""]
-	start_button.text = "START %d FRIENDLY VS %d ENEMIES — %s — %s" % [friendly_total, int(enemy_count.value), map_label, objective_label.to_upper()]
+	start_button.text = "START %d FRIENDLY VS %d ENEMIES — %s — %s — SEED %d" % [friendly_total, int(enemy_count.value), map_label, objective_label.to_upper(), int(seed_input.value)]
 
 func _on_generation_toggled(enabled: bool) -> void:
 	map_size_option.disabled = not enabled
@@ -143,8 +143,8 @@ func _prepare_new_seed() -> void:
 
 
 func _refresh_seed_controls() -> void:
-	auto_seed_toggle.disabled = not generated_map_toggle.button_pressed
-	seed_input.editable = generated_map_toggle.button_pressed and not auto_seed_toggle.button_pressed
+	auto_seed_toggle.disabled = false
+	seed_input.editable = not auto_seed_toggle.button_pressed
 
 func _start_battle() -> void:
 	var battle = battle_scene.instantiate() as BattleLevel

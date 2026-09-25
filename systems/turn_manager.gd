@@ -122,9 +122,13 @@ func is_any_unit_moving() -> bool:
 
 func _on_player_ap_changed(current: int, _maximum: int, unit: TacticalUnit) -> void:
 	if current == 0:
-		_advance_selection_if_needed.call_deferred(unit)
+		# Extraction may free the unit before this deferred check executes.
+		_advance_selection_if_needed.call_deferred(unit.get_instance_id())
 
-func _advance_selection_if_needed(exhausted_unit: TacticalUnit) -> void:
+func _advance_selection_if_needed(exhausted_unit_id: int) -> void:
+	var exhausted_unit := instance_from_id(exhausted_unit_id) as TacticalUnit
+	if not is_instance_valid(exhausted_unit):
+		return
 	if is_instance_valid(exhausted_unit) and exhausted_unit.is_moving:
 		await exhausted_unit.movement_finished
 	if current_phase != TurnPhase.PLAYER_TURN or active_unit != exhausted_unit:

@@ -1,13 +1,15 @@
 class_name GeneratedTerrainPresenter
 extends RefCounted
 
+const HILL_SKIRT_CLEARANCE := 0.015
+
 static func build(map_data: MapData, parent: Node3D, cell_size: float) -> void:
 	if map_data.source_kind == "generated_refinery":
 		preload("res://systems/generation/refinery_presenter.gd").build(map_data, parent, cell_size)
 	var container_cells: Dictionary = {}
 	var building_cells: Dictionary = {}
 	for hill in map_data.hills:
-		_build_hill(map_data, parent, cell_size, hill)
+		_build_hill(map_data, parent, hill)
 	for platform in map_data.platforms:
 		_build_platform(map_data, parent, cell_size, platform)
 	for traversal in map_data.generated_traversals:
@@ -106,7 +108,7 @@ static func _build_platform_rails(data: MapData, parent: Node3D, cell_size: floa
 				_add_stair_beam(rails, start + offset, finish + offset, cell_size * 0.045, material)
 			_add_stair_beam(rails, center, center + Vector3.UP * cell_size * 0.95, cell_size * 0.045, material)
 
-static func _build_hill(map_data: MapData, parent: Node3D, cell_size: float, hill: GeneratedHillData) -> void:
+static func _build_hill(map_data: MapData, parent: Node3D, hill: GeneratedHillData) -> void:
 	var terrain := Node3D.new()
 	terrain.name = "Hill_%d_%d" % [hill.footprint.position.x, hill.footprint.position.y]
 	parent.add_child(terrain)
@@ -124,7 +126,13 @@ static func _build_hill(map_data: MapData, parent: Node3D, cell_size: float, hil
 			var points: Array[Vector3] = []
 			for offset in [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.ONE, Vector2i.DOWN]:
 				var key: Vector2i = Vector2i(x, z) + offset
-				points.append(heights.get(key, map_data.get_cell(Vector3i(key.x, 0, key.y)).world_position))
+				if heights.has(key):
+					points.append(heights[key])
+				else:
+					# The sloped skirt shares its outer boundary with the map floor.
+					# A small clearance prevents coplanar triangles from z-fighting.
+					var ground := map_data.get_cell(Vector3i(key.x, 0, key.y))
+					points.append(ground.world_position + Vector3.UP * HILL_SKIRT_CLEARANCE)
 			for index in [0, 1, 2, 0, 2, 3]:
 				surface.add_vertex(points[index])
 	surface.generate_normals()
@@ -211,8 +219,8 @@ static func _add_stair_beam(parent: Node3D, start: Vector3, finish: Vector3, wid
 	parent.add_child(beam)
 	beam.position = (start + finish) * 0.5
 	var axis := (finish - start).normalized()
-	var reference := Vector3.RIGHT if absf(axis.dot(Vector3.UP)) > 0.99 else Vector3.UP
-	var across := reference.cross(axis).normalized()
+	var reference_axis := Vector3.RIGHT if absf(axis.dot(Vector3.UP)) > 0.99 else Vector3.UP
+	var across := reference_axis.cross(axis).normalized()
 	beam.basis = Basis(across, axis.cross(across), axis)
 	_add_box(beam, Vector3(width, width, start.distance_to(finish)), Vector3.ZERO, material)
 

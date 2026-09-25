@@ -121,12 +121,15 @@ func _execute_turn() -> void:
 			_record_ai_decision("Defend", unit.name, reason, "Attack, Move")
 		break
 
-	if _should_control_unit():
+	var should_advance := _should_control_unit()
+	# Queue changes emit active_unit_changed synchronously. Clear this guard first
+	# so a partially spent automated player can be selected again immediately.
+	_is_executing = false
+	if should_advance:
 		if turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN:
 			turn_manager.advance_automated_player(unit)
 		else:
 			turn_manager.end_current_turn()
-	_is_executing = false
 
 func _try_mission_step(has_moved: bool) -> MissionStepResult:
 	if not current_mission_intent.is_actionable():

@@ -106,6 +106,8 @@ func _check_large_map_hill_presentation() -> void:
 	var terrain := level.get_node("GeneratedTerrain")
 	var hill_nodes := terrain.get_children().filter(func(child: Node) -> bool: return child.name.begins_with("Hill_"))
 	check(hill_nodes.size() == 1, "Large-map presenter creates one hill structure")
+	var hill_mesh := hill_nodes[0].get_child(0) as MeshInstance3D
+	check(hill_mesh.mesh.get_aabb().position.y >= GeneratedTerrainPresenter.HILL_SKIRT_CLEARANCE - 0.001, "Hill skirt remains above the floor to avoid z-fighting")
 	var hill: GeneratedHillData = grid.map_data.hills[0]
 	var summit: Vector3i = hill.surface_cells.filter(func(position: Vector3i) -> bool: return position.y == 3)[0]
 	var point := grid.map_data.get_cell(summit).world_position

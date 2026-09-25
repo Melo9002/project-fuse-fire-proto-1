@@ -46,7 +46,7 @@ Run `godot_console --headless --path . --script res://tests/elevation_selection_
 
 ## Understand the code
 
-Start with [the architecture guide](docs/architecture.md): ownership, the path from a click to an action, cleanup changes, and known limitations.
+Start with the [documentation index](docs/index.md). It links the architecture guide, simulation commands, reproducibility notes, and the asset-import workflow.
 
 The prototype has weighted 3D paths, low-cover vaulting, directional cover, elevation-aware line of sight, ladders, ramps, stairs, platforms, movement previews, selection, AP, shared actions, faction relationships, attacks, defense, autonomous allied and enemy turns, generated maps, mission actors, seven playable objective rules, battle results, a tactical camera, and health displays.
 
@@ -113,7 +113,17 @@ Generated maps place solid buildings with 3 m walkable roofs and a ground-to-roo
 
 Generated maps contain seeded freestanding platforms at elevation levels 2 or 3. Their decks are ordinary walkable `MapData` cells with local pathfinding and click surfaces. Generated ladders, stairs, or ramps connect every deck to the ground and reserve their route from later cover placement.
 
-Match Setup also offers **Special — Refinery**, a 40×30 generated layout with four elevated industrial platforms. It guarantees visible ladder, stair, and ramp examples while retaining seeded cover, buildings, and the large-map hill.
+Match Setup also offers **Special — Refinery**, a 40×30 fixed industrial shell with four elevated service platforms, two reachable tower caps, and two connecting catwalks. It guarantees visible ladder, stair, and ramp examples while seed-generated containers and smaller cover change between battles. Generic buildings and the large-map hill are excluded from this preset.
+
+Generated mission placement runs after the completed 3D path graph is available. Reach zones favor balanced contested positions, friendly and enemy extraction zones sit across the battlefield from their pursuing faction, and rescue actors favor tactically useful cells away from both deployments. Placement may use reachable elevated cells, keeps all mission areas separate from deployments and one another, and rejects unreachable results during map validation. Run `godot_console --headless --path . --script res://tests/generated_mission_placement_smoke.gd` to exercise 80 standard and refinery maps.
+
+`MapQualityEvaluator` measures generated battlefields without changing or rejecting them. Its report compares nearby cover access, viable route branches, and spawn exposure between opposing deployments; it also records open-space density, the largest connected open region, and clear firing-lane lengths. The report exposes separate cover, route, open-space, firing-lane, and spawn-safety scores plus the weakest category. Every initialized battle prints a compact `[MapQuality]` line containing the seed and raw measurements. The overall score is diagnostic rather than a generation pass/fail rule. Run `godot_console --headless --path . --script res://tests/map_quality_metrics_smoke.gd` to analyze 80 maps and print reproducible low-, middle-, and high-ranked examples for playtest calibration.
+
+`AIMatchSimulator` runs the ordinary battle scene with player control delegated to the existing AI. It records mission outcome, rounds, decision count, elapsed time, and the map-quality report, while classifying non-completion as a stall, round limit, timeout, or setup failure. The batch smoke test cycles through all seven mission presets and accepts optional first-seed, match-count, and mission-offset arguments: `godot_console --headless --path . --script res://tests/ai_match_simulation_smoke.gd -- 23001 7 0`. This harness does not simplify combat or objective rules; it automates the same AI-vs-AI mode available through F3.
+
+Non-completing simulations produce a JSON seed-failure report under `user://ai_sim_failure_reports`. Each report records the complete configuration, map identity and dimensions, validation errors, final state, and structured AI decision trail. The batch prints its absolute file path for immediate reproduction. Run `godot_console --headless --path . --script res://tests/seed_failure_report_smoke.gd` to verify report serialization.
+
+Every match has a visible battle seed, including authored maps. Combat rolls use a battle-scoped RNG initialized from that seed, alongside the seeded AI decision stream; generated maps currently use the same value for their separate map-generation stream. Repeating the same authored map, battle configuration, action order, and seed therefore reproduces its combat outcomes. The simulation batch rotates through Small, Medium, and Large generated maps so size is part of its coverage. Run `godot_console --headless --path . --script res://tests/ai_match_determinism_smoke.gd` for the authored-map repeatability check.
 
 Large 40×30 maps add one seeded 7×7 terraced hill. Its three walkable elevation tiers use the ordinary one-level step rule, while solid terrain beneath the surface blocks movement and line of sight.
 
@@ -140,7 +150,7 @@ The VIP is additional to the selected player combatants and reserves one allied 
 2. **Reach:** immediate victory when a player or AI ally reaches the zone.
 3. **Protect:** eliminate all enemies while every protected ally/VIP survives; losing one causes defeat.
 4. **Rescue:** approaching the neutral VIP picks them up; the carrier moves more slowly and must extract while carrying them. Once the VIP is being carried, other friendly units may also evacuate.
-5. **Extract:** every living player or allied unit can evacuate individually through a zero-AP action. Dead units leave the required pool. A VIP is required only when enabled in match setup. All included VIPs must extract; after at least one ordinary unit extracts, the player may end early and leave others behind. Extracting everyone ends automatically.
+5. **Extract:** every living player or allied unit can evacuate individually through a zero-AP action. Extraction has no generic turn minimum: an eligible unit may leave as soon as its objective is active and it occupies the zone. Dead units leave the required pool. A VIP is required only when enabled in match setup. All included VIPs must extract; after at least one ordinary unit extracts, the player may end early and leave others behind. Extracting everyone ends automatically.
 6. **Survive:** survive three rounds, then evacuate every remaining unit; early departure is disabled.
 7. **Enemy Evacuation:** defeat every enemy before any reaches the orange evacuation zone. One successful enemy escape causes defeat.
 

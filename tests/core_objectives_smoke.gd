@@ -31,6 +31,12 @@ func _finish(level: BattleLevel) -> void:
 	await process_frame
 	await process_frame
 
+func _world_bar_for(level: BattleLevel, unit: TacticalUnit) -> UnitWorldBar:
+	for child in level.get_node("Visualizers/BattleUI").get_children():
+		if child is UnitWorldBar and child._target_unit == unit:
+			return child as UnitWorldBar
+	return null
+
 func _check_eliminate() -> void:
 	var level := await _create_level(MissionObjectiveDefinition.Kind.ELIMINATE)
 	var state := level.objective_manager.get_objective(&"eliminate")
@@ -106,7 +112,14 @@ func _check_extract() -> void:
 	exhausted.stats.current_ap = 0
 	level.battle_controller.grid_manager.update_unit_position(exhausted, exhausted.grid_position, destinations[0])
 	check(level.objective_manager.can_extract(exhausted), "An exhausted non-active unit may use the zero-AP Extract action")
-	check(level.objective_manager.try_extract(exhausted), "The shared Extract action evacuates an eligible unit")
+	var world_bar := _world_bar_for(level, exhausted)
+	check(world_bar != null, "An eligible unit has a world-space action bar")
+	if world_bar:
+		world_bar._refresh_extract_button()
+		check(world_bar.extract_button.visible and not world_bar.extract_button.disabled, "Extract is immediately enabled in an active extraction zone")
+		world_bar.extract_button.button_down.emit()
+		await process_frame
+	check(level.objective_manager.extracted_units == 1, "The Extract button's mouse-down signal evacuates the eligible unit")
 	check(level.objective_manager.can_end_mission_early(), "One extracted unit unlocks early mission ending")
 	check(level.objective_manager.end_mission_early(), "The player can end early and leave a living unit behind")
 	check(level.objective_manager.get_result_report() == "VIPs extracted 0/0 | Units extracted 1/2", "The mission report retains extraction consequences")

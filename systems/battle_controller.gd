@@ -29,13 +29,16 @@ const UNIFORM_AP_COST = 1
 
 var pathfinder := Pathfinder.new()
 var last_map_validation: MapValidationResult
+var last_map_quality: MapQualityReport
 var current_movement_zone: Array[Vector3i] = []
 var current_attack_zone: Array[Vector3i] = []
 var _last_attack_preview := ""
 var debug_enemy_control: bool = false
 var debug_player_ai: bool = false
 var ai_difficulty: AIDifficultyPolicy.Tier = AIDifficultyPolicy.Tier.NORMAL
+var battle_seed: int = 1
 var ai_decision_seed: int = 1
+var _combat_rng := RandomNumberGenerator.new()
 var _squad_contexts: Dictionary[int, SquadContext] = {}
 var is_action_in_progress: bool = false:
 	set(value):
@@ -73,6 +76,7 @@ func _ready() -> void:
 	mouse_raycaster.unit_clicked.connect(_on_unit_clicked)
 
 func initialize_battle(prebuilt_map: MapData = null) -> bool:
+	_combat_rng.seed = ai_decision_seed * 2147483647 + 104729
 	if prebuilt_map:
 		grid_manager.map_data = prebuilt_map
 		MapGraphBuilder.build(prebuilt_map, pathfinder)
@@ -82,7 +86,7 @@ func initialize_battle(prebuilt_map: MapData = null) -> bool:
 		# Let CSG collision bodies enter the physics world before scanning.
 		await get_tree().create_timer(0.05).timeout
 		MapBuilder.scan_obstacles(get_world_3d(), grid_manager, pathfinder)
-	MissionZonePlanner.populate_defaults(grid_manager.map_data)
+	MissionZonePlanner.populate_defaults(grid_manager.map_data, pathfinder)
 	var faction_counts := {
 		TacticalUnit.Faction.PLAYER: 0,
 		TacticalUnit.Faction.ALLY: 0,
@@ -98,6 +102,13 @@ func initialize_battle(prebuilt_map: MapData = null) -> bool:
 		grid_manager.map_data.cells.size(),
 		grid_manager.map_data.traversal_links.size(),
 		grid_manager.map_data.get_total_spawn_count(),
+	])
+	last_map_quality = MapQualityEvaluator.evaluate(grid_manager.map_data, pathfinder)
+	print_rich("[color=medium_purple][MapQuality][/color] battle seed %d | map %s%s — %s" % [
+		battle_seed,
+		last_map_quality.source_kind.to_upper(),
+		" seed %d" % last_map_quality.seed if grid_manager.map_data.source_kind.begins_with("generated") else "",
+		last_map_quality.summary(),
 	])
 
 	for unit_item in turn_manager.player_units + turn_manager.allied_units + turn_manager.enemy_units:
@@ -331,7 +342,7 @@ func try_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:
 	if not evaluation.is_legal:
 		return false
 
-	var attack_cmd = AttackAction.new(attacker, target, UNIFORM_AP_COST, evaluation.hit_chance)
+	var attack_cmd = AttackAction.new(attacker, target, UNIFORM_AP_COST, evaluation.hit_chance, _combat_rng.randf() * 100.0)
 	if not attack_cmd.execute():
 		return false
 	attack_resolved.emit(attacker, target, attack_cmd.did_hit, evaluation.hit_chance)

@@ -19,6 +19,7 @@ var player_unit_count: int = 2
 var enemy_unit_count: int = 2
 var allied_unit_count: int = 0
 var use_generated_map: bool = false
+var battle_seed: int = 1
 var generation_seed: int = 1
 var generated_size := Vector2i(32, 24)
 var use_refinery_map := false
@@ -27,23 +28,26 @@ var vip_behavior := MissionActor.VIPBehavior.PLAYER_CONTROLLED
 var mission_definition: MissionDefinition
 var ai_difficulty: AIDifficultyPolicy.Tier = AIDifficultyPolicy.Tier.NORMAL
 
-func configure(player_count: int, enemy_count: int, generate_map: bool = false, map_seed: int = 1, ally_count: int = 0, map_size := Vector2i(32, 24), add_vip: bool = false, behavior: MissionActor.VIPBehavior = MissionActor.VIPBehavior.PLAYER_CONTROLLED, selected_mission: MissionDefinition = null, selected_difficulty: AIDifficultyPolicy.Tier = AIDifficultyPolicy.Tier.NORMAL, refinery: bool = false) -> void:
+func configure(player_count: int, enemy_count: int, generate_map: bool = false, match_seed: int = 1, ally_count: int = 0, map_size := Vector2i(32, 24), add_vip: bool = false, behavior: MissionActor.VIPBehavior = MissionActor.VIPBehavior.PLAYER_CONTROLLED, selected_mission: MissionDefinition = null, selected_difficulty: AIDifficultyPolicy.Tier = AIDifficultyPolicy.Tier.NORMAL, refinery: bool = false) -> void:
 	generated_size = map_size if FlatMapGenerator.MAP_SIZES.has(map_size) else Vector2i(32, 24)
 	player_unit_count = clampi(player_count, 1, 5)
 	enemy_unit_count = clampi(enemy_count, 1, 5)
 	allied_unit_count = clampi(ally_count, 0, 5)
 	use_generated_map = generate_map
 	use_refinery_map = refinery
-	generation_seed = map_seed
+	battle_seed = match_seed
+	generation_seed = match_seed
 	include_vip = add_vip
 	vip_behavior = behavior
 	mission_definition = selected_mission
 	ai_difficulty = selected_difficulty
 	battle_controller.ai_difficulty = selected_difficulty
-	battle_controller.ai_decision_seed = map_seed
+	battle_controller.battle_seed = match_seed
+	battle_controller.ai_decision_seed = match_seed
 
 func _ready() -> void:
 	print("[AI Difficulty] %s" % AIDifficultyPolicy.get_label(ai_difficulty))
+	print("[BattleSeed] %d — %s map" % [battle_seed, "generated" if use_generated_map else "authored"])
 	if mission_definition != null:
 		objective_manager.load_mission(mission_definition)
 	if use_generated_map:
