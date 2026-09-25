@@ -207,6 +207,8 @@ func _on_debug_player_ai_changed(enabled: bool) -> void:
 		_execute_turn()
 
 func _should_control_unit() -> bool:
+	if battle_controller.replay_mode:
+		return false
 	if not is_instance_valid(unit) or turn_manager.active_unit != unit:
 		return false
 	if turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN:

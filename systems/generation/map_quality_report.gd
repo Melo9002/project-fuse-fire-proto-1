@@ -1,7 +1,7 @@
 class_name MapQualityReport
 extends RefCounted
 
-var seed := 0
+var map_seed := 0
 var source_kind := ""
 var map_size := Vector2i.ZERO
 var stoppable_cells := 0

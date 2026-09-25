@@ -6,6 +6,7 @@ This directory contains the project documentation intended for developers, desig
 
 - [Architecture](architecture.md) — ownership boundaries, combat flow, objectives, AI, generation, validation, and known limits.
 - [Simulation and reproducibility](simulation.md) — AI-versus-AI batches, seeds, map sizes, output interpretation, and deterministic checks.
+- [Battle replay](replay.md) — action recording, deterministic playback, end-screen controls, testing, and future camera modes.
 - [Asset import](asset-import.md) — a practical Godot workflow for importing models, textures, rigs, animations, and the future humanoid test character.
 
 ## Files that intentionally remain outside `docs/`

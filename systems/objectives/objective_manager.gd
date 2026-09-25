@@ -157,7 +157,10 @@ func should_seek_extraction(unit: TacticalUnit) -> bool:
 	return mission.mission_id != &"prototype_survive" or get_objective(&"survive").is_completed()
 
 func try_extract(unit: TacticalUnit) -> bool:
-	return ExtractAction.new(unit, self).execute()
+	var succeeded := ExtractAction.new(unit, self).execute()
+	if succeeded and _battle_controller:
+		_battle_controller.record_replay_action("extract", unit)
+	return succeeded
 
 func can_rescue(rescuer: TacticalUnit, target: TacticalUnit) -> bool:
 	var rescue := get_objective(&"rescue")
@@ -172,7 +175,11 @@ func can_rescue(rescuer: TacticalUnit, target: TacticalUnit) -> bool:
 	return _grid_manager.get_unit_grid(rescuer).distance_to(_grid_manager.get_unit_grid(target)) == 1.0
 
 func try_rescue(rescuer: TacticalUnit, target: TacticalUnit) -> bool:
-	return RescueActionData.new(rescuer, target, self).execute()
+	var target_name := String(target.name) if is_instance_valid(target) else ""
+	var succeeded := RescueActionData.new(rescuer, target, self).execute()
+	if succeeded and _battle_controller:
+		_battle_controller.record_replay_action("rescue", rescuer, {"target": target_name})
+	return succeeded
 
 func complete_rescue(rescuer: TacticalUnit, target: TacticalUnit) -> bool:
 	if not can_rescue(rescuer, target):
@@ -274,7 +281,10 @@ func _on_unit_moved(unit: TacticalUnit, _from: Vector3i, to: Vector3i) -> void:
 	var rescue := get_objective(&"rescue")
 	if rescue and rescue.is_active() and rescue.definition.is_pursued_by(unit.faction):
 		var target := _adjacent_target(to, rescue.definition.target_ids)
-		if target: try_rescue(unit, target)
+		# This is a consequence of the movement command, so the enclosing move
+		# recording captures the resulting carried actor and objective progress.
+		# Recording a second nested rescue here would place it before the move.
+		if target: complete_rescue(unit, target)
 
 func _adjacent_target(cell: Vector3i, ids: Array[StringName]) -> TacticalUnit:
 	for occupied in _grid_manager.occupancy_map:

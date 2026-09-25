@@ -11,7 +11,7 @@ const FIRING_RANGE := 10
 
 static func evaluate(map_data: MapData, pathfinder: Pathfinder) -> MapQualityReport:
 	var report := MapQualityReport.new()
-	report.seed = map_data.generation_seed
+	report.map_seed = map_data.generation_seed
 	report.source_kind = map_data.source_kind
 	report.map_size = map_data.map_size
 	var stoppable := _stoppable_cells(map_data)

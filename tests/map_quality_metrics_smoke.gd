@@ -36,7 +36,7 @@ func _print_calibration_report(reports: Array[MapQualityReport]) -> void:
 	var labels: Array[String] = ["LOW", "MIDDLE", "HIGH"]
 	for index in representative_indices.size():
 		var report := reports[representative_indices[index]]
-		print("[MapQuality] REPRESENTATIVE %s — seed %d | %s | %s" % [labels[index], report.seed, report.source_kind, report.calibration_summary()])
+		print("[MapQuality] REPRESENTATIVE %s — seed %d | %s | %s" % [labels[index], report.map_seed, report.source_kind, report.calibration_summary()])
 
 func _check_map(dimensions: Vector2i, map_seed: int, refinery: bool) -> MapQualityReport:
 	var data := FlatMapGenerator.generate_with_cover(dimensions.x, dimensions.y, 1.0, map_seed, 5, refinery)

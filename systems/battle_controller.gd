@@ -14,6 +14,7 @@ signal debug_player_ai_changed(enabled: bool)
 signal ai_decision_recorded(record: Dictionary)
 signal unit_moved(unit: TacticalUnit, from_cell: Vector3i, to_cell: Vector3i)
 signal unit_defeated_in_battle(unit: TacticalUnit)
+signal replay_action_committed(record: Dictionary)
 
 @export var tactical_unit: TacticalUnit
 @export var mouse_raycaster: MouseRaycaster
@@ -40,6 +41,7 @@ var battle_seed: int = 1
 var ai_decision_seed: int = 1
 var _combat_rng := RandomNumberGenerator.new()
 var _squad_contexts: Dictionary[int, SquadContext] = {}
+var replay_mode := false
 var is_action_in_progress: bool = false:
 	set(value):
 		if is_action_in_progress != value:
@@ -107,7 +109,7 @@ func initialize_battle(prebuilt_map: MapData = null) -> bool:
 	print_rich("[color=medium_purple][MapQuality][/color] battle seed %d | map %s%s — %s" % [
 		battle_seed,
 		last_map_quality.source_kind.to_upper(),
-		" seed %d" % last_map_quality.seed if grid_manager.map_data.source_kind.begins_with("generated") else "",
+		" seed %d" % last_map_quality.map_seed if grid_manager.map_data.source_kind.begins_with("generated") else "",
 		last_map_quality.summary(),
 	])
 
@@ -302,6 +304,8 @@ func set_debug_player_ai(enabled: bool) -> void:
 func is_current_phase_manually_controlled() -> bool:
 	if not turn_manager:
 		return false
+	if replay_mode:
+		return false
 	return (not debug_player_ai and turn_manager.current_phase == TurnManager.TurnPhase.PLAYER_TURN) \
 		or (debug_enemy_control and turn_manager.current_phase == TurnManager.TurnPhase.ENEMY_TURN)
 
@@ -346,6 +350,11 @@ func try_attack(attacker: TacticalUnit, target: TacticalUnit) -> bool:
 	if not attack_cmd.execute():
 		return false
 	attack_resolved.emit(attacker, target, attack_cmd.did_hit, evaluation.hit_chance)
+	record_replay_action("attack", attacker, {
+		"target": String(target.name),
+		"did_hit": attack_cmd.did_hit,
+		"hit_chance": evaluation.hit_chance,
+	})
 
 	is_attack_mode_active = false
 	is_move_mode_active = false
@@ -357,6 +366,7 @@ func try_defend(unit: TacticalUnit) -> bool:
 	var action = DefendAction.new(unit, UNIFORM_AP_COST)
 	if not action.execute():
 		return false
+	record_replay_action("defend", unit)
 	is_move_mode_active = false
 	is_attack_mode_active = false
 	return true
@@ -380,7 +390,22 @@ func try_move(unit: TacticalUnit, target_cell: Vector3i) -> bool:
 	await unit.movement_finished
 	is_action_in_progress = false
 	unit_moved.emit(unit, start_cell, target_cell)
+	record_replay_action("move", unit, {
+		"from": [start_cell.x, start_cell.y, start_cell.z],
+		"to": [target_cell.x, target_cell.y, target_cell.z],
+	})
 	return true
+
+func record_replay_action(kind: String, actor: TacticalUnit, details: Dictionary = {}) -> void:
+	var record := {
+		"kind": kind,
+		"actor": String(actor.name) if is_instance_valid(actor) else "",
+		"round": turn_manager.current_round if turn_manager else 0,
+		"phase": int(turn_manager.current_phase) if turn_manager else -1,
+	}
+	for key in details:
+		record[key] = details[key]
+	replay_action_committed.emit(record)
 
 func _build_movement_path(unit: TacticalUnit, path: PackedVector3Array) -> PackedVector3Array:
 	var animated_path := PackedVector3Array()

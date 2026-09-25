@@ -1,6 +1,12 @@
 class_name BattleLevel
 extends Node3D
 
+const ReplayRecorderData := preload("res://systems/replay/battle_replay_recorder.gd")
+const ReplayPlayerData := preload("res://systems/replay/battle_replay_player.gd")
+const ReplaySessionData := preload("res://systems/replay/battle_replay_session.gd")
+const MATCH_SETUP_PATH := "res://ui/match_setup.tscn"
+const BATTLE_SCENE_PATH := "res://levels/prototype_map/prototype_map.tscn"
+
 @export var unit_scene: PackedScene
 @export var player_spawn_zone: SpawnZone
 @export var enemy_spawn_zone: SpawnZone
@@ -27,6 +33,9 @@ var include_vip := false
 var vip_behavior := MissionActor.VIPBehavior.PLAYER_CONTROLLED
 var mission_definition: MissionDefinition
 var ai_difficulty: AIDifficultyPolicy.Tier = AIDifficultyPolicy.Tier.NORMAL
+var pending_replay
+var _replay_configuration: Dictionary = {}
+var _replay_recorder
 
 func configure(player_count: int, enemy_count: int, generate_map: bool = false, match_seed: int = 1, ally_count: int = 0, map_size := Vector2i(32, 24), add_vip: bool = false, behavior: MissionActor.VIPBehavior = MissionActor.VIPBehavior.PLAYER_CONTROLLED, selected_mission: MissionDefinition = null, selected_difficulty: AIDifficultyPolicy.Tier = AIDifficultyPolicy.Tier.NORMAL, refinery: bool = false) -> void:
 	generated_size = map_size if FlatMapGenerator.MAP_SIZES.has(map_size) else Vector2i(32, 24)
@@ -44,6 +53,30 @@ func configure(player_count: int, enemy_count: int, generate_map: bool = false, 
 	battle_controller.ai_difficulty = selected_difficulty
 	battle_controller.battle_seed = match_seed
 	battle_controller.ai_decision_seed = match_seed
+	_replay_configuration = {
+		"player_count": player_unit_count,
+		"enemy_count": enemy_unit_count,
+		"generated_map": use_generated_map,
+		"seed": battle_seed,
+		"ally_count": allied_unit_count,
+		"map_size": generated_size,
+		"include_vip": include_vip,
+		"vip_behavior": vip_behavior,
+		"mission": mission_definition.duplicate(true) if mission_definition else null,
+		"difficulty": ai_difficulty,
+		"refinery": use_refinery_map,
+	}
+
+func configure_replay(recording) -> void:
+	pending_replay = recording
+	var config: Dictionary = recording.configuration
+	configure(
+		config.player_count, config.enemy_count, config.generated_map, config.seed,
+		config.ally_count, config.map_size, config.include_vip, config.vip_behavior,
+		config.mission.duplicate(true) if config.mission else null,
+		config.difficulty, config.refinery
+	)
+	battle_controller.replay_mode = true
 
 func _ready() -> void:
 	print("[AI Difficulty] %s" % AIDifficultyPolicy.get_label(ai_difficulty))
@@ -75,6 +108,7 @@ func _ready() -> void:
 		print_rich("[color=cyan][MapGenerator][/color] COVER — seed %d, %dx%d, %d low, %d full, %d building(s), %d platform(s), %d hill(s)" % [generation_seed, width, depth, cover_counts.x, cover_counts.y, generated_map.buildings.size(), generated_map.platforms.size(), generated_map.hills.size()])
 		if await battle_controller.initialize_battle(generated_map):
 			_initialize_objectives()
+			_initialize_replay_support()
 	else:
 		_spawn_team(player_unit_count, player_spawn_zone, player_units_parent, false)
 		_spawn_team(allied_unit_count, ally_spawn_zone, allied_units_parent, true)
@@ -82,6 +116,31 @@ func _ready() -> void:
 		_spawn_team(enemy_unit_count, enemy_spawn_zone, enemy_units_parent, true)
 		if await battle_controller.initialize_battle():
 			_initialize_objectives()
+			_initialize_replay_support()
+
+func _initialize_replay_support() -> void:
+	if pending_replay:
+		var player = ReplayPlayerData.new()
+		player.name = "BattleReplayPlayer"
+		add_child(player)
+		player.begin(self, pending_replay)
+		return
+	_replay_recorder = ReplayRecorderData.new()
+	_replay_recorder.begin(_replay_configuration, battle_controller, turn_manager)
+
+func replay_last_battle() -> void:
+	if not ReplaySessionData.has_recording():
+		return
+	get_tree().paused = false
+	var replay_level := load(BATTLE_SCENE_PATH).instantiate() as BattleLevel
+	replay_level.configure_replay(ReplaySessionData.last_recording)
+	get_tree().root.add_child(replay_level)
+	get_tree().current_scene = replay_level
+	queue_free()
+
+func return_to_match_setup() -> void:
+	get_tree().paused = false
+	get_tree().change_scene_to_file(MATCH_SETUP_PATH)
 
 func _initialize_objectives() -> void:
 	if mission_definition == null:

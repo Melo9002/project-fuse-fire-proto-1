@@ -9,6 +9,7 @@ signal active_unit_changed(unit: TacticalUnit)
 signal round_started(round_number: int)
 signal battle_ended(result: BattleResult)
 signal player_actions_exhausted
+signal turn_ended(record: Dictionary)
 
 @export_group("Battle Roster")
 @export var player_units: Array[TacticalUnit] = []
@@ -39,12 +40,19 @@ func end_current_turn() -> void:
 		return
 
 	print_rich("[color=yellow][TURN][/color] end_current_turn() called. Current Phase: ", current_phase)
+	var turn_record := {
+		"kind": "end_turn",
+		"actor": String(active_unit.name) if is_instance_valid(active_unit) else "",
+		"round": current_round,
+		"phase": int(current_phase),
+	}
 	if current_phase == TurnPhase.PLAYER_TURN:
 		_start_ally_turn_phase()
 	elif current_phase == TurnPhase.ALLY_TURN:
 		_advance_ally_unit_queue()
 	elif current_phase == TurnPhase.ENEMY_TURN:
 		_advance_enemy_unit_queue()
+	turn_ended.emit(turn_record)
 
 func select_player_unit(unit: TacticalUnit) -> bool:
 	if current_phase != TurnPhase.PLAYER_TURN or battle_result != BattleResult.ONGOING or is_any_unit_moving():
@@ -67,10 +75,17 @@ func advance_automated_player(finished_unit: TacticalUnit) -> void:
 	for offset in range(1, player_units.size() + 1):
 		var candidate := player_units[(start_index + offset) % player_units.size()]
 		if is_instance_valid(candidate) and candidate.stats and not candidate.stats.is_defeated \
-			and candidate.stats.current_ap > 0:
+		and candidate.stats.current_ap > 0:
 			_set_active_unit(candidate)
 			return
+	var turn_record := {
+		"kind": "end_turn",
+		"actor": String(finished_unit.name) if is_instance_valid(finished_unit) else "",
+		"round": current_round,
+		"phase": int(current_phase),
+	}
 	_start_ally_turn_phase()
+	turn_ended.emit(turn_record)
 
 func can_unit_act(unit: TacticalUnit) -> bool:
 	if battle_result != BattleResult.ONGOING or active_unit != unit or is_any_unit_moving():
